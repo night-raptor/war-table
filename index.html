@@ -85,6 +85,7 @@
   .tab { border: none; background: none; color: var(--txt-dim); padding: 11px 16px; cursor: pointer; font-size: 14px; font-weight: 600; border-bottom: 2px solid transparent; white-space: nowrap; border-radius: 6px 6px 0 0; }
   .tab:hover { color: var(--txt); background: rgba(255,255,255,.03); }
   .tab[aria-selected="true"] { color: var(--gold-soft); border-bottom-color: var(--gold); }
+  .t-short { display: none; }
 
   main { max-width: 1150px; margin: 0 auto; padding: 22px; }
   .view-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -244,8 +245,10 @@
 
   @media (max-width: 720px) {
     header.app { flex-wrap: wrap; gap: 10px 12px; padding: calc(11px + env(safe-area-inset-top, 0px)) calc(14px + env(safe-area-inset-right, 0px)) 11px calc(14px + env(safe-area-inset-left, 0px)); }
-    nav.tabs { top: 0; position: sticky; padding: 8px 12px 0; }
-    .tab { padding: 12px 14px; }
+    nav.tabs { top: 0; position: sticky; overflow: visible; gap: 3px; padding: 7px 8px 0; }
+    .tab { flex: 1 1 0; text-align: center; padding: 12px 4px; font-size: 13px; }
+    .t-full { display: none; }
+    .t-short { display: inline; }
     main { padding: 14px; padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px)); }
     .view-head h2 { font-size: 18px; }
     .brand .sub { display: none; }
@@ -360,10 +363,10 @@
   </header>
 
   <nav class="tabs" role="tablist" aria-label="Views">
-    <button class="tab" role="tab" aria-selected="true"  data-view="calendar">Calendar</button>
-    <button class="tab" role="tab" aria-selected="false" data-view="games">Pickup Games</button>
-    <button class="tab" role="tab" aria-selected="false" data-view="tourneys">Tournaments</button>
-    <button class="tab" role="tab" aria-selected="false" data-view="players">Players</button>
+    <button class="tab" role="tab" aria-selected="true"  data-view="calendar"><span class="t-full">Calendar</span><span class="t-short">Calendar</span></button>
+    <button class="tab" role="tab" aria-selected="false" data-view="games"><span class="t-full">Pickup Games</span><span class="t-short">Games</span></button>
+    <button class="tab" role="tab" aria-selected="false" data-view="tourneys"><span class="t-full">Tournaments</span><span class="t-short">Tourneys</span></button>
+    <button class="tab" role="tab" aria-selected="false" data-view="players"><span class="t-full">Players</span><span class="t-short">Players</span></button>
   </nav>
 
   <main id="main" tabindex="-1">
