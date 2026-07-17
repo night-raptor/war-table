@@ -6,6 +6,7 @@
 <meta name="description" content="Live battle calendar for our Warhammer 40k group — accounts, RSVPs, tournaments and win/loss records, synced in real time.">
 <meta name="theme-color" content="#0e0f13">
 <title>War Table — 40k Battle Calendar</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23000000'/><g transform='translate(4,4)'><path fill='%23e0c073' d='M12 1.9c-4.6 0-8.1 3.3-8.1 8 0 2.5 1 4.4 2.7 5.7.3.2.4.5.4.9v1.1c0 .7.6 1.3 1.3 1.3h.4v1.5c0 .4.3.8.8.8s.8-.3.8-.8v-1.5h1v1.5c0 .4.3.8.8.8s.8-.3.8-.8v-1.5h1v1.5c0 .4.3.8.8.8s.8-.3.8-.8v-1.5h.4c.7 0 1.3-.6 1.3-1.3v-1.1c0-.4.1-.7.4-.9 1.7-1.3 2.7-3.2 2.7-5.7 0-4.7-3.5-8-8.1-8z'/><ellipse cx='8.5' cy='10.2' rx='2' ry='2.4' fill='%23000000'/><ellipse cx='15.5' cy='10.2' rx='2' ry='2.4' fill='%23000000'/><path d='M12 12.6l-1.1 2.3h2.2z' fill='%23000000'/></g></svg>">
 <style>
   :root {
     --bg: #0e0f13;
@@ -713,11 +714,19 @@ function tierOf(p){
   return { tier, s, next: idx>0 ? TIERS[idx-1] : null };
 }
 
+function skullSvg(fill, eye){
+  return `<svg viewBox="0 0 24 24" style="width:74%;height:74%;display:block" aria-hidden="true">
+    <path fill="${fill}" d="M12 1.9c-4.6 0-8.1 3.3-8.1 8 0 2.5 1 4.4 2.7 5.7.3.2.4.5.4.9v1.1c0 .7.6 1.3 1.3 1.3h.4v1.5c0 .4.3.8.8.8s.8-.3.8-.8v-1.5h1v1.5c0 .4.3.8.8.8s.8-.3.8-.8v-1.5h1v1.5c0 .4.3.8.8.8s.8-.3.8-.8v-1.5h.4c.7 0 1.3-.6 1.3-1.3v-1.1c0-.4.1-.7.4-.9 1.7-1.3 2.7-3.2 2.7-5.7 0-4.7-3.5-8-8.1-8z"/>
+    <ellipse cx="8.5" cy="10.2" rx="2" ry="2.4" fill="${eye}"/>
+    <ellipse cx="15.5" cy="10.2" rx="2" ry="2.4" fill="${eye}"/>
+    <path d="M12 12.6l-1.1 2.3h2.2z" fill="${eye}"/>
+  </svg>`;
+}
 function avatar(p, cls=""){
-  if(!p) return `<span class="ava ${cls}" style="background:#555">?</span>`;
+  if(!p) return `<span class="ava ${cls}" style="background:#333;box-shadow:0 0 0 3px #444">${skullSvg('#888','#333')}</span>`;
   const { tier } = tierOf(p);
-  const ring = p.color || '#c9a24a';
-  return `<span class="ava ${cls}" style="background:${tier.color};box-shadow:0 0 0 2px ${ring}" title="${esc(p.name)} — ${tier.name}">${initials(p.name)}</span>`;
+  const bg = p.color || '#c9a24a';
+  return `<span class="ava ${cls}" style="background:${bg};box-shadow:0 0 0 3px ${tier.color}" title="${esc(p.name)} — ${tier.name}">${skullSvg(tier.color, bg)}</span>`;
 }
 
 function attendanceBlock(ev){
