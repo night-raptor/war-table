@@ -198,6 +198,11 @@
   .grid-lbl { display: block; font-size: 12.5px; color: var(--txt-dim); margin-bottom: 8px; font-weight: 600; }
   .seg.rseg .opt:has(input:checked) { border-color: var(--gold); color: var(--gold-soft); background: rgba(201,162,74,.12); }
   .wtag { display: block; font-size: 10px; color: var(--txt-faint); font-weight: 700; margin-top: 2px; }
+  .combo { position: relative; }
+  .combo-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; margin: 0; padding: 4px; list-style: none; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius-sm); max-height: 190px; overflow: auto; z-index: 30; box-shadow: var(--shadow); }
+  .combo-list li { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 7px; cursor: pointer; font-size: 14px; }
+  .combo-list li.active, .combo-list li:hover { background: #2a2f3a; }
+  .combo-list .cf { margin-left: auto; color: var(--txt-faint); font-size: 12px; }
 
   .empty { text-align: center; color: var(--txt-faint); padding: 50px 20px; border: 1px dashed var(--line); border-radius: var(--radius); }
   .empty .big { font-size: 15px; color: var(--txt-dim); margin-bottom: 6px; }
@@ -471,33 +476,72 @@
   </div>
 </div>
 
-<!-- LOG RESULT MODAL -->
-<div class="overlay" id="resultOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="rsTitle">
+<!-- LOG MATCH MODAL (2-step) -->
+<div class="overlay" id="matchOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="mTitle">
   <div class="modal">
-    <h3 id="rsTitle">Log a battle result</h3>
-    <form id="resultForm">
-      <div class="field">
-        <label id="rfmtLbl">Format</label>
-        <div class="seg rseg" role="radiogroup" aria-labelledby="rfmtLbl">
-          <label class="opt"><input type="radio" name="rformat" value="game" checked> Pickup<span class="wtag">×1</span></label>
-          <label class="opt"><input type="radio" name="rformat" value="rtt"> RTT<span class="wtag">×3</span></label>
-          <label class="opt"><input type="radio" name="rformat" value="gt"> GT<span class="wtag">×6</span></label>
+    <h3 id="mTitle">Log a game</h3>
+    <form id="matchForm">
+      <input type="hidden" id="mId">
+      <!-- STEP 1: details -->
+      <div id="mStep1">
+        <div class="field">
+          <label id="mfmtLbl">Format</label>
+          <div class="seg rseg" role="radiogroup" aria-labelledby="mfmtLbl">
+            <label class="opt"><input type="radio" name="mformat" value="game" checked> Pickup<span class="wtag">×1</span></label>
+            <label class="opt"><input type="radio" name="mformat" value="rtt"> RTT<span class="wtag">×3</span></label>
+            <label class="opt"><input type="radio" name="mformat" value="gt"> GT<span class="wtag">×6</span></label>
+          </div>
+        </div>
+        <div class="field"><label for="mDate">Date of game</label><input id="mDate" type="date" required></div>
+        <div class="row2">
+          <div class="field"><label for="mFaction">Your faction</label><input id="mFaction" placeholder="e.g. Necrons"></div>
+          <div class="field"><label for="mResult">Result</label>
+            <select id="mResult"><option value="w">Win</option><option value="d">Draw</option><option value="l">Loss</option></select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="mOpp">Opponent</label>
+            <div class="combo">
+              <input id="mOpp" placeholder="Search players or type a name…" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="mOppList">
+              <input type="hidden" id="mOppId">
+              <ul class="combo-list" id="mOppList" role="listbox" hidden></ul>
+            </div>
+          </div>
+          <div class="field"><label for="mOppFaction">Opponent faction</label><input id="mOppFaction" placeholder="e.g. Aeldari"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="mScoreFor">Your score</label><input id="mScoreFor" type="number" min="0" inputmode="numeric" placeholder="—"></div>
+          <div class="field"><label for="mScoreAgainst">Opponent score</label><input id="mScoreAgainst" type="number" min="0" inputmode="numeric" placeholder="—"></div>
+        </div>
+        <div class="err" id="mErr" role="alert"></div>
+        <div class="modal-foot">
+          <button type="button" class="btn ghost" data-close>Cancel</button>
+          <button type="button" class="btn primary" id="mNext">Review →</button>
         </div>
       </div>
-      <div class="field">
-        <label id="routLbl">Outcome</label>
-        <div class="seg rseg" role="radiogroup" aria-labelledby="routLbl">
-          <label class="opt"><input type="radio" name="routcome" value="w" checked> Win</label>
-          <label class="opt"><input type="radio" name="routcome" value="d"> Draw</label>
-          <label class="opt"><input type="radio" name="routcome" value="l"> Loss</label>
+      <!-- STEP 2: confirm -->
+      <div id="mStep2" hidden>
+        <p class="hint" style="margin:0 0 4px">Check the details, then confirm to save this game to your record.</p>
+        <div id="mSummary" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div class="err" id="mErr2" role="alert"></div>
+        <div class="modal-foot">
+          <button type="button" class="btn ghost" id="mBack">← Back</button>
+          <button type="submit" class="btn primary" id="mConfirm">Confirm &amp; log</button>
         </div>
-      </div>
-      <div class="err" id="rsErr" role="alert"></div>
-      <div class="modal-foot">
-        <button type="button" class="btn ghost" data-close>Cancel</button>
-        <button type="submit" class="btn primary">Record result</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- MATCH LOG (history) MODAL -->
+<div class="overlay" id="logOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="logTitle">
+  <div class="modal">
+    <h3 id="logTitle">My match log</h3>
+    <div class="body">
+      <button type="button" class="btn primary block" id="logAdd">+ Log a game</button>
+      <div id="logList" style="display:flex;flex-direction:column;gap:10px;margin-top:6px"></div>
+      <div class="modal-foot"><button type="button" class="btn ghost" data-close>Close</button></div>
+    </div>
   </div>
 </div>
 
@@ -527,7 +571,7 @@
         </div>
       </div>
       <div class="field" id="wldRow">
-        <label class="grid-lbl">Record <span class="hint">— wins / losses / draws per format</span></label>
+        <label class="grid-lbl">Baseline record <span class="hint">— pre-tracking W / L / D per format; logged games add on top</span></label>
         <div class="rec-grid">
           <div></div><div class="rg-h">W</div><div class="rg-h">L</div><div class="rg-h">D</div>
           <div class="rg-lab">Pickup</div><input id="gW" type="number" min="0" value="0" aria-label="Pickup wins"><input id="gL" type="number" min="0" value="0" aria-label="Pickup losses"><input id="gD" type="number" min="0" value="0" aria-label="Pickup draws">
@@ -601,7 +645,7 @@ const TYPE_LABEL = { game:"Game", rtt:"RTT", gt:"GT" };
 function initials(name){ return (name||"?").trim().split(/\s+/).map(w=>w[0]).slice(0,2).join("").toUpperCase(); }
 
 /* ---------- App state ---------- */
-const state = { players: {}, events: [], user: null, me: null };
+const state = { players: {}, events: [], matches: [], user: null, me: null };
 let calCursor = startOfMonth(new Date());
 const player = id => state.players[id];
 const ADMIN_UIDS = window.ADMIN_UIDS || [];
@@ -706,8 +750,8 @@ $("#googleBtn").addEventListener("click", async ()=>{
 $("#signOutBtn").onclick = ()=> fb.signOut(auth);
 
 /* ---------- Signed-in: attach live listeners ---------- */
-let unsubPlayers=null, unsubEvents=null, pendingWelcome=false;
-function detachListeners(){ if(unsubPlayers) unsubPlayers(); if(unsubEvents) unsubEvents(); unsubPlayers=unsubEvents=null; }
+let unsubPlayers=null, unsubEvents=null, unsubMatches=null, pendingWelcome=false;
+function detachListeners(){ if(unsubPlayers) unsubPlayers(); if(unsubEvents) unsubEvents(); if(unsubMatches) unsubMatches(); unsubPlayers=unsubEvents=unsubMatches=null; }
 
 async function onSignedIn(user){
   // ensure a profile doc exists (covers Google sign-ins & older accounts)
@@ -732,6 +776,10 @@ async function onSignedIn(user){
     state.events = qs.docs.map(d=>({ id:d.id, ...d.data() }));
     renderAll();
   });
+  unsubMatches = fb.onSnapshot(fb.collection(dbf,"matches"), (qs)=>{
+    state.matches = qs.docs.map(d=>({ id:d.id, ...d.data() }));
+    renderAll();
+  });
 }
 
 /* ============================================================
@@ -750,12 +798,14 @@ const TIERS = [                                      // high → low; first whos
 ];
 const UNRANKED = { key:"unranked", name:"Unranked", color:"#5c5f68", min:0 };
 
-// Read a player's per-format record, with fallback for any legacy flat wins/losses/draws.
+// A player's record = optional baseline (rec) + every logged match. Matches are the detail; rec is a pre-tracking baseline.
+function matchesFor(pid){ return state.matches.filter(m=>m.playerId===pid); }
 function getStats(p){
   const z=()=>({w:0,l:0,d:0});
   const cats={ game:z(), rtt:z(), gt:z() };
   if(p && p.rec){ ["game","rtt","gt"].forEach(k=>{ const r=p.rec[k]||{}; cats[k]={ w:+r.w||0, l:+r.l||0, d:+r.d||0 }; }); }
   else if(p){ cats.game={ w:+p.wins||0, l:+p.losses||0, d:+p.draws||0 }; }  // legacy → treat as pickup
+  if(p) matchesFor(p.id).forEach(m=>{ if(cats[m.format] && (m.result==="w"||m.result==="l"||m.result==="d")) cats[m.format][m.result]++; });
   let W=0,L=0,D=0, points=0, wgames=0;
   ["game","rtt","gt"].forEach(k=>{ const c=cats[k], wt=WEIGHTS[k];
     W+=c.w; L+=c.l; D+=c.d;
@@ -912,14 +962,14 @@ function renderPlayers(){
         <div class="rec-rate"><div class="pct">${s.overallRate}%</div><div class="k">Win rate</div></div>
       </div>
       <div class="rec-breakdown"><span><b>Pickup</b> ${fmtRec(s.cats.game)}</span><span><b>RTT</b> ${fmtRec(s.cats.rtt)}</span><span><b>GT</b> ${fmtRec(s.cats.gt)}</span></div>
-      ${isMe?`<div class="logrow"><button class="btn sm" data-openresult style="flex:1">⚔️ Log a result</button></div>`:""}
+      ${isMe?`<div class="logrow"><button class="btn sm" data-logmatch style="flex:1">⚔️ Log a game</button><button class="btn sm" data-openlog style="flex:1">📜 Match log</button></div>`:""}
     </div>`);
     grid.appendChild(card);
   });
   $("#playerSub").textContent = `${players.length} in the group`;
 }
 
-function renderAll(){ if($("#app").hidden) return; renderCalendar(); renderGames(); renderTourneys(); renderPlayers(); const dm=document.getElementById("dayOverlay"); if(dm && !dm.hidden) renderDay(); }
+function renderAll(){ if($("#app").hidden) return; renderCalendar(); renderGames(); renderTourneys(); renderPlayers(); const dm=document.getElementById("dayOverlay"); if(dm && !dm.hidden) renderDay(); const lm=document.getElementById("logOverlay"); if(lm && !lm.hidden) renderLog(); }
 
 /* ============================================================
    VIEW SWITCHING
@@ -1022,7 +1072,7 @@ function openMyProfile(welcome=false){
 const nn = id => Math.max(0, Number($(id).value)||0);
 function updateProfilePreview(){
   const bg = $("#plColor").value;
-  const temp = { color:bg, rec:{ game:{w:nn("#gW"),l:nn("#gL"),d:nn("#gD")}, rtt:{w:nn("#rW"),l:nn("#rL"),d:nn("#rD")}, gt:{w:nn("#tW"),l:nn("#tL"),d:nn("#tD")} } };
+  const temp = { id: state.user && state.user.uid, color:bg, rec:{ game:{w:nn("#gW"),l:nn("#gL"),d:nn("#gD")}, rtt:{w:nn("#rW"),l:nn("#rL"),d:nn("#rD")}, gt:{w:nn("#tW"),l:nn("#tL"),d:nn("#tD")} } };
   const { tier } = tierOf(temp);
   const av = $("#plAvatar");
   av.style.background = bg;
@@ -1068,19 +1118,132 @@ function renderDay(){
 }
 $("#dayAdd").onclick=()=>{ const d=currentDay; closeOverlay(dayOverlay); openEvent(null,"game",d); };
 
-/* ---------- Log result modal ---------- */
-const rsOverlay=$("#resultOverlay");
-function openResult(){ $("#rsErr").textContent=""; $$('input[name="rformat"]')[0].checked=true; $$('input[name="routcome"]')[0].checked=true; openOverlay(rsOverlay,"#resultForm .opt input"); }
-$("#resultForm").addEventListener("submit", async (e)=>{
-  e.preventDefault();
-  const fmt=($('input[name="rformat"]:checked')||{}).value||"game";
-  const out=($('input[name="routcome"]:checked')||{}).value||"w";
-  try {
-    await fb.updateDoc(fb.doc(dbf,"players",state.user.uid), { [`rec.${fmt}.${out}`]: fb.increment(1) });
-    closeOverlay(rsOverlay);
-    toast(out==="w"?"Victory recorded! ⚔️":out==="l"?"Loss recorded":"Draw recorded");
-  } catch(err){ $("#rsErr").textContent="Couldn't record — "+(err.message||"try again."); }
+/* ---------- Log match modal (2-step) ---------- */
+const matchOverlay=$("#matchOverlay");
+const FMT_LABEL={ game:"Pickup game", rtt:"RTT", gt:"GT" };
+const RES_LABEL={ w:"Win", d:"Draw", l:"Loss" };
+function showMatchStep(n){ $("#mStep1").hidden = n!==1; $("#mStep2").hidden = n!==2; }
+function openMatch(m){
+  const isEdit=!!m;
+  $("#mTitle").textContent = isEdit ? "Edit game" : "Log a game";
+  $("#mId").value = m?.id || "";
+  $$('input[name="mformat"]').forEach(r=>{ r.checked = r.value===(m?.format||"game"); });
+  syncMseg();
+  $("#mDate").value = m?.date || TODAY;
+  $("#mFaction").value = m?.faction || (state.me && (state.me.factions||[])[0]) || "";
+  $("#mResult").value = m?.result || "w";
+  $("#mOpp").value = m?.oppName || "";
+  $("#mOppId").value = m?.oppId || "";
+  $("#mOppList").hidden = true;
+  $("#mOppFaction").value = m?.oppFaction || "";
+  $("#mScoreFor").value = (m && m.scoreFor!=null) ? m.scoreFor : "";
+  $("#mScoreAgainst").value = (m && m.scoreAgainst!=null) ? m.scoreAgainst : "";
+  $("#mErr").textContent=""; $("#mErr2").textContent="";
+  showMatchStep(1);
+  $("#mConfirm").textContent = isEdit ? "Confirm changes" : "Confirm & log";
+  openOverlay(matchOverlay,"#mDate");
+}
+function syncMseg(){ const c=$('input[name="mformat"]:checked'); $$("#matchForm .rseg .opt").forEach(o=>o.classList.remove("sel")); if(c) c.closest(".opt").classList.add("sel"); }
+$$('input[name="mformat"]').forEach(r=>r.addEventListener("change", syncMseg));
+function readMatchForm(){
+  const sf=$("#mScoreFor").value, sa=$("#mScoreAgainst").value;
+  return {
+    format: ($('input[name="mformat"]:checked')||{}).value||"game",
+    date: $("#mDate").value,
+    faction: $("#mFaction").value.trim(),
+    result: $("#mResult").value,
+    oppName: $("#mOpp").value.trim(),
+    oppId: $("#mOppId").value || null,
+    oppFaction: $("#mOppFaction").value.trim(),
+    scoreFor: sf===""?null:Number(sf),
+    scoreAgainst: sa===""?null:Number(sa),
+  };
+}
+$("#mNext").addEventListener("click", ()=>{
+  const d=readMatchForm();
+  if(!d.date){ $("#mErr").textContent="Please pick the date of the game."; return; }
+  const scoreLine = (d.scoreFor!=null||d.scoreAgainst!=null) ? `${d.scoreFor??"—"} – ${d.scoreAgainst??"—"}` : "—";
+  const row=(k,v)=>`<div style="display:flex;justify-content:space-between;gap:12px;font-size:14px"><span class="faint">${k}</span><span style="text-align:right">${esc(v)||"—"}</span></div>`;
+  $("#mSummary").innerHTML =
+    row("Format", FMT_LABEL[d.format]) +
+    row("Date", fmtLong(d.date)) +
+    row("Result", RES_LABEL[d.result]) +
+    row("Score (you – opp)", scoreLine) +
+    row("Your faction", d.faction) +
+    row("Opponent", d.oppName) +
+    row("Opponent faction", d.oppFaction);
+  $("#mErr2").textContent="";
+  showMatchStep(2);
 });
+$("#mBack").addEventListener("click", ()=>showMatchStep(1));
+$("#matchForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  if($("#mStep2").hidden){ $("#mNext").click(); return; }   // still on step 1 → advance to review, don't save
+  const id=$("#mId").value; const d=readMatchForm();
+  d.playerId = state.user.uid;
+  try {
+    if(id){ await fb.updateDoc(fb.doc(dbf,"matches",id), d); toast("Game updated"); }
+    else { d.createdBy=state.user.uid; d.createdAt=fb.serverTimestamp(); await fb.addDoc(fb.collection(dbf,"matches"), d); toast(RES_LABEL[d.result]+" logged ⚔️"); }
+    closeOverlay(matchOverlay);
+  } catch(err){ $("#mErr2").textContent="Couldn't save — "+(err.message||"try again."); }
+});
+
+/* ---------- Opponent picker (type + search registered players) ---------- */
+const mOpp=$("#mOpp"), mOppList=$("#mOppList"), mOppId=$("#mOppId");
+let comboItems=[], comboIdx=-1;
+function renderOppList(){
+  const q=mOpp.value.trim().toLowerCase();
+  let arr=Object.values(state.players).filter(p=>p.id!==state.user.uid);
+  if(q) arr=arr.filter(p=>(p.name||"").toLowerCase().includes(q));
+  arr.sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+  comboItems=arr.slice(0,8);
+  if(!comboItems.length){ mOppList.hidden=true; mOpp.setAttribute("aria-expanded","false"); return; }
+  mOppList.innerHTML=comboItems.map((p,i)=>`<li role="option" data-pid="${p.id}" class="${i===comboIdx?'active':''}">${avatar(p)}<span>${esc(p.name)}</span>${(p.factions&&p.factions[0])?`<span class="cf">${esc(p.factions[0])}</span>`:""}</li>`).join("");
+  mOppList.hidden=false; mOpp.setAttribute("aria-expanded","true");
+}
+function pickOpp(p){ mOpp.value=p.name; mOppId.value=p.id; if(!$("#mOppFaction").value && p.factions && p.factions[0]) $("#mOppFaction").value=p.factions[0]; mOppList.hidden=true; comboIdx=-1; }
+mOpp.addEventListener("input", ()=>{ mOppId.value=""; comboIdx=-1; renderOppList(); });
+mOpp.addEventListener("focus", renderOppList);
+mOpp.addEventListener("keydown", e=>{
+  if(mOppList.hidden){ return; }
+  if(e.key==="ArrowDown"){ e.preventDefault(); comboIdx=Math.min(comboItems.length-1,comboIdx+1); renderOppList(); }
+  else if(e.key==="ArrowUp"){ e.preventDefault(); comboIdx=Math.max(0,comboIdx-1); renderOppList(); }
+  else if(e.key==="Enter"){ e.preventDefault(); if(comboIdx>=0) pickOpp(comboItems[comboIdx]); else mOppList.hidden=true; }
+  else if(e.key==="Escape"){ mOppList.hidden=true; }
+});
+mOppList.addEventListener("mousedown", e=>{ const li=e.target.closest("li[data-pid]"); if(li){ e.preventDefault(); const p=state.players[li.dataset.pid]; if(p) pickOpp(p); } });
+document.addEventListener("click", e=>{ if(!e.target.closest(".combo")) mOppList.hidden=true; });
+
+/* ---------- Match log (history) modal ---------- */
+const logOverlay=$("#logOverlay");
+function openLog(){ renderLog(); openOverlay(logOverlay,"#logAdd"); }
+function renderLog(){
+  const list = matchesFor(state.user.uid).slice().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const box=$("#logList"); box.innerHTML="";
+  if(!list.length){ box.appendChild(el(`<div class="empty" style="padding:24px 16px"><div class="big">No games logged yet</div><div>Tap “Log a game” to add your first result.</div></div>`)); return; }
+  list.forEach(m=>{
+    const badge=`<span class="badge ${m.format}">${TYPE_LABEL[m.format]}</span>`;
+    const rescol = m.result==="w"?"#8fe0a6":m.result==="l"?"#f2a29f":"#a6a29a";
+    const score = (m.scoreFor!=null||m.scoreAgainst!=null) ? ` · ${m.scoreFor??"—"}–${m.scoreAgainst??"—"}` : "";
+    const opp = m.oppName ? `vs ${esc(m.oppName)}` : "vs —";
+    const facs = [m.faction, m.oppFaction].filter(Boolean).join(" vs ");
+    box.appendChild(el(`<div class="card" style="gap:8px">
+      <div class="card-top">${badge}
+        <span style="font-weight:700;color:${rescol}">${RES_LABEL[m.result]}${score}</span>
+        <span style="margin-left:auto;display:flex;gap:6px">
+          <button class="btn sm ghost" data-medit="${m.id}" aria-label="Edit game">✎</button>
+          <button class="btn sm ghost danger" data-mdel="${m.id}" aria-label="Delete game">🗑</button>
+        </span>
+      </div>
+      <div class="meta-row"><span>${esc(fmtLong(m.date||""))}</span><span>${esc(opp)}</span>${facs?`<span>${esc(facs)}</span>`:""}</div>
+    </div>`));
+  });
+}
+async function deleteMatch(id){
+  if(!confirm("Delete this logged game? Your record will update.")) return;
+  try{ await fb.deleteDoc(fb.doc(dbf,"matches",id)); toast("Game removed"); }
+  catch(err){ toast("Couldn't delete"); }
+}
 
 /* ============================================================
    OVERLAY HELPERS
@@ -1108,7 +1271,13 @@ document.addEventListener("click", e=>{
   }
   const edit=e.target.closest("[data-edit]");
   if(edit){ openEvent(state.events.find(x=>x.id===edit.dataset.edit)); return; }
-  if(e.target.closest("[data-openresult]")){ openResult(); return; }
+  if(e.target.closest("[data-logmatch]")){ openMatch(null); return; }
+  if(e.target.closest("[data-openlog]")){ openLog(); return; }
+  if(e.target.closest("#logAdd")){ openMatch(null); return; }
+  const me2=e.target.closest("[data-medit]");
+  if(me2){ openMatch(state.matches.find(x=>x.id===me2.dataset.medit)); return; }
+  const md=e.target.closest("[data-mdel]");
+  if(md){ deleteMatch(md.dataset.mdel); return; }
   if(e.target.closest("#editMeCard")){ openMyProfile(); return; }
   const day=e.target.closest(".day");
   if(day){ openDay(day.dataset.date); return; }
