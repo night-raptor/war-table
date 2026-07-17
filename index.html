@@ -156,6 +156,17 @@
   .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
   .pcard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
   .pcard.me { border-color: rgba(201,162,74,.5); box-shadow: inset 0 0 0 1px rgba(201,162,74,.15); }
+  .pcard.clickable { cursor: pointer; transition: border-color .12s, transform .06s; }
+  .pcard.clickable:hover { border-color: #47505f; }
+  .pcard.clickable:active { transform: scale(.995); }
+  .prof-hero { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+  .prof-hero .ava { width: 76px; height: 76px; flex: none; }
+  .prof-sec-title { font-size: 15px; font-weight: 700; margin: 20px 0 10px; }
+  .prof-upcoming { display: flex; flex-direction: column; gap: 8px; }
+  .prof-upcoming .row { display: flex; align-items: center; gap: 10px; background: var(--bg-2); border: 1px solid var(--line); border-left: 3px solid var(--line); border-radius: var(--radius-sm); padding: 9px 12px; font-size: 13px; }
+  .prof-upcoming .row.game { border-left-color: var(--teal); }
+  .prof-upcoming .row.rtt { border-left-color: var(--amber); }
+  .prof-upcoming .row.gt { border-left-color: var(--crimson); }
   .pcard .phead { display: flex; align-items: center; gap: 11px; }
   .ava.lg { width: 44px; height: 44px; font-size: 17px; }
   .ava.xl { width: 84px; height: 84px; }
@@ -412,7 +423,7 @@
     </section>
 
     <section id="view-players" role="tabpanel" hidden>
-      <div class="view-head"><h2>Players</h2><span class="muted" id="playerSub"></span><button class="btn sm" id="editMeBtn">Edit my profile</button></div>
+      <div class="view-head"><h2>Players</h2><span class="muted" id="playerSub"></span><button class="btn sm" id="editMeBtn">My profile</button></div>
       <details class="rank-legend">
         <summary>How ranks work</summary>
         <div class="legend-body">
@@ -427,6 +438,11 @@
         </div>
       </details>
       <div class="grid-cards" id="playerGrid"></div>
+    </section>
+
+    <section id="view-profile" role="tabpanel" hidden>
+      <button class="btn sm ghost" id="profBack" style="margin-bottom:14px">← Back to players</button>
+      <div id="profileBody"></div>
     </section>
   </main>
 
@@ -537,18 +553,6 @@
   </div>
 </div>
 
-<!-- MATCH LOG (history) MODAL -->
-<div class="overlay" id="logOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="logTitle">
-  <div class="modal">
-    <h3 id="logTitle">My match log</h3>
-    <div class="body">
-      <button type="button" class="btn primary block" id="logAdd">+ Log a game</button>
-      <div id="logList" style="display:flex;flex-direction:column;gap:10px;margin-top:6px"></div>
-      <div class="modal-foot"><button type="button" class="btn ghost" data-close>Close</button></div>
-    </div>
-  </div>
-</div>
-
 <!-- PROFILE MODAL -->
 <div class="overlay" id="playerOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="plTitle">
   <div class="modal">
@@ -643,6 +647,7 @@ function ymd(dt){ return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2
 function startOfMonth(dt){ return new Date(dt.getFullYear(), dt.getMonth(), 1); }
 function parseYMD(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y, m-1, d); }
 function fmtLong(s){ return parseYMD(s).toLocaleDateString(undefined, { weekday:"long", month:"long", day:"numeric", year:"numeric" }); }
+function fmtDate(s){ return parseYMD(s).toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" }); }
 function fmtTime(t){ if(!t) return ""; const [h,m]=t.split(":").map(Number); const ap=h>=12?"PM":"AM"; const hh=((h+11)%12)+1; return hh+":"+String(m).padStart(2,"0")+" "+ap; }
 const TODAY = ymd(new Date());
 const TYPE_LABEL = { game:"Game", rtt:"RTT", gt:"GT" };
@@ -948,11 +953,11 @@ function renderPlayers(){
   players.forEach(({p,t})=>{
     const s=t.s, tier=t.tier, isMe=p.id===state.user.uid;
     const upcoming = state.events.filter(e=>e.rsvps && e.rsvps[p.id]==="in" && e.date>=TODAY).length;
-    const card=el(`<div class="pcard ${isMe?"me":""}" ${isMe?'id="myCard"':''}>
+    const card=el(`<div class="pcard clickable ${isMe?"me":""}" ${isMe?'id="myCard"':''} role="button" tabindex="0" data-profile="${p.id}" aria-label="View ${esc(p.name)}'s profile">
       <div class="phead">${avatar(p,"lg")}
         <div><div class="pname">${esc(p.name)}${isMe?'<span class="youtag">You</span>':''}</div>
         <div class="faint" style="font-size:12px">${p.points?esc(p.points)+"pts · ":""}${upcoming} upcoming</div></div>
-        ${isMe?`<button class="btn sm ghost" id="editMeCard" style="margin-left:auto" aria-label="Edit my profile">✎</button>`:""}
+        <span class="faint" style="margin-left:auto;font-size:12px">View →</span>
       </div>
       <div class="tierbar">
         <span class="tier-badge" style="color:${tier.color};border-color:${tier.color};background:${tier.color}22">${tier.name}</span>
@@ -966,7 +971,6 @@ function renderPlayers(){
         <div class="rec-rate"><div class="pct">${s.overallRate}%</div><div class="k">Win rate</div></div>
       </div>
       <div class="rec-breakdown"><span><b>Pickup</b> ${fmtRec(s.cats.game)}</span><span><b>RTT</b> ${fmtRec(s.cats.rtt)}</span><span><b>GT</b> ${fmtRec(s.cats.gt)}</span></div>
-      ${isMe?`<div class="logrow"><button class="btn sm" data-logmatch style="flex:1">⚔️ Log a game</button><button class="btn sm" data-openlog style="flex:1">📜 Match log</button></div>`:""}
     </div>`);
     grid.appendChild(card);
   });
@@ -978,7 +982,7 @@ function setHeaderMe(){
   $("#meName").textContent = state.me.name || "You";
   const av=$("#meAva"); if(av){ const { tier }=tierOf(state.me); const bg=state.me.color||"#c9a24a"; av.style.background=bg; av.style.boxShadow="0 0 0 2px "+tier.color; av.innerHTML=skullSvg(tier.color,bg); }
 }
-function renderAll(){ if($("#app").hidden) return; setHeaderMe(); renderCalendar(); renderGames(); renderTourneys(); renderPlayers(); const dm=document.getElementById("dayOverlay"); if(dm && !dm.hidden) renderDay(); const lm=document.getElementById("logOverlay"); if(lm && !lm.hidden) renderLog(); }
+function renderAll(){ if($("#app").hidden) return; setHeaderMe(); renderCalendar(); renderGames(); renderTourneys(); renderPlayers(); const dm=document.getElementById("dayOverlay"); if(dm && !dm.hidden) renderDay(); const pv=document.getElementById("view-profile"); if(pv && !pv.hidden) renderProfile(); }
 
 /* ============================================================
    VIEW SWITCHING
@@ -986,6 +990,7 @@ function renderAll(){ if($("#app").hidden) return; setHeaderMe(); renderCalendar
 function showView(name){
   $$(".tab").forEach(t=>t.setAttribute("aria-selected", String(t.dataset.view===name)));
   ["calendar","games","tourneys","players"].forEach(v=>{ $("#view-"+v).hidden = v!==name; });
+  $("#view-profile").hidden = true;
 }
 $$(".tab").forEach(t=>t.addEventListener("click", ()=>showView(t.dataset.view)));
 $("#prevM").onclick=()=>{ calCursor.setMonth(calCursor.getMonth()-1); renderCalendar(); };
@@ -1223,36 +1228,82 @@ mOpp.addEventListener("keydown", e=>{
 mOppList.addEventListener("mousedown", e=>{ const li=e.target.closest("li[data-pid]"); if(li){ e.preventDefault(); const p=state.players[li.dataset.pid]; if(p) pickOpp(p); } });
 document.addEventListener("click", e=>{ if(!e.target.closest(".combo")) mOppList.hidden=true; });
 
-/* ---------- Match log (history) modal ---------- */
-const logOverlay=$("#logOverlay");
-function openLog(){ renderLog(); openOverlay(logOverlay,"#logAdd"); }
-function renderLog(){
-  const list = matchesFor(state.user.uid).slice().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
-  const box=$("#logList"); box.innerHTML="";
-  if(!list.length){ box.appendChild(el(`<div class="empty" style="padding:24px 16px"><div class="big">No games logged yet</div><div>Tap “Log a game” to add your first result.</div></div>`)); return; }
+/* ---------- Match list (public; edit/delete only when canManage) ---------- */
+function renderMatchList(box, pid, canManage){
+  const list = matchesFor(pid).slice().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  box.innerHTML="";
+  if(!list.length){ box.appendChild(el(`<div class="empty" style="padding:22px 16px"><div class="big">No games logged yet</div>${canManage?'<div>Tap “Log a game” to add your first result.</div>':''}</div>`)); return; }
   list.forEach(m=>{
-    const badge=`<span class="badge ${m.format}">${TYPE_LABEL[m.format]}</span>`;
     const rescol = m.result==="w"?"#8fe0a6":m.result==="l"?"#f2a29f":"#a6a29a";
     const score = (m.scoreFor!=null||m.scoreAgainst!=null) ? ` · ${m.scoreFor??"—"}–${m.scoreAgainst??"—"}` : "";
-    const opp = m.oppName ? `vs ${esc(m.oppName)}` : "vs —";
+    const opp = m.oppName ? (m.oppId && state.players[m.oppId] ? `vs <span data-profile="${m.oppId}" style="cursor:pointer;text-decoration:underline">${esc(m.oppName)}</span>` : `vs ${esc(m.oppName)}`) : "vs —";
     const facs = [m.faction, m.oppFaction].filter(Boolean).join(" vs ");
-    box.appendChild(el(`<div class="card" style="gap:8px">
-      <div class="card-top">${badge}
+    box.appendChild(el(`<div class="card ${m.format}" style="gap:8px">
+      <div class="card-top"><span class="badge ${m.format}">${TYPE_LABEL[m.format]}</span>
         <span style="font-weight:700;color:${rescol}">${RES_LABEL[m.result]}${score}</span>
-        <span style="margin-left:auto;display:flex;gap:6px">
+        ${canManage?`<span style="margin-left:auto;display:flex;gap:6px">
           <button class="btn sm ghost" data-medit="${m.id}" aria-label="Edit game">✎</button>
           <button class="btn sm ghost danger" data-mdel="${m.id}" aria-label="Delete game">🗑</button>
-        </span>
+        </span>`:""}
       </div>
-      <div class="meta-row"><span>${esc(fmtLong(m.date||""))}</span><span>${esc(opp)}</span>${facs?`<span>${esc(facs)}</span>`:""}</div>
+      <div class="meta-row"><span>${esc(fmtLong(m.date||""))}</span><span>${opp}</span>${facs?`<span>${esc(facs)}</span>`:""}</div>
     </div>`));
   });
 }
 async function deleteMatch(id){
-  if(!confirm("Delete this logged game? Your record will update.")) return;
+  if(!confirm("Delete this logged game? The record will update.")) return;
   try{ await fb.deleteDoc(fb.doc(dbf,"matches",id)); toast("Game removed"); }
   catch(err){ toast("Couldn't delete"); }
 }
+
+/* ---------- Profile page ---------- */
+let currentProfile=null;
+function showProfile(pid){
+  currentProfile=pid;
+  ["calendar","games","tourneys","players"].forEach(v=>$("#view-"+v).hidden=true);
+  $$(".tab").forEach(t=>t.setAttribute("aria-selected","false"));
+  $("#view-profile").hidden=false;
+  renderProfile();
+  $("#main").focus(); window.scrollTo({top:0,behavior:"smooth"});
+}
+function renderProfile(){
+  const p=player(currentProfile); const box=$("#profileBody");
+  if(!p){ box.innerHTML='<div class="empty"><div class="big">Player not found</div></div>'; return; }
+  const t=tierOf(p), s=t.s, tier=t.tier, isMe=(state.user&&p.id===state.user.uid);
+  const bg=p.color||'#c9a24a';
+  const facs=(p.factions||[]).map(f=>`<span class="ftag">${esc(f)}</span>`).join("")||'<span class="faint" style="font-size:12px">No factions listed</span>';
+  const upcoming=state.events.filter(e=>e.rsvps&&e.rsvps[p.id]==="in"&&e.date>=TODAY).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  box.innerHTML = `
+    <div class="prof-hero">
+      <span class="ava" style="background:${bg};box-shadow:0 0 0 3px ${tier.color}">${skullSvg(tier.color,bg)}</span>
+      <div style="flex:1;min-width:180px">
+        <div class="pname" style="font-size:21px">${esc(p.name)}${isMe?'<span class="youtag">You</span>':''}</div>
+        <div class="tierbar" style="margin-top:7px">
+          <span class="tier-badge" style="color:${tier.color};border-color:${tier.color};background:${tier.color}22">${tier.name}</span>
+          <span class="tier-prog">Rating ${s.rating} · ${progressText(t)}</span>
+        </div>
+        ${p.points?`<div class="faint" style="font-size:12px;margin-top:5px">Usual points: ${esc(p.points)}</div>`:""}
+      </div>
+      ${isMe?`<div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn sm" data-logmatch>⚔️ Log a game</button>
+        <button class="btn sm ghost" id="profEdit">Edit profile</button>
+      </div>`:""}
+    </div>
+    <div class="factions" style="margin:14px 0">${facs}</div>
+    <div class="record">
+      <div class="rec-num"><div class="n w">${s.W}</div><div class="k">Win</div></div>
+      <div class="rec-num"><div class="n l">${s.L}</div><div class="k">Loss</div></div>
+      <div class="rec-num"><div class="n d">${s.D}</div><div class="k">Draw</div></div>
+      <div class="rec-rate"><div class="pct">${s.overallRate}%</div><div class="k">Win rate</div></div>
+    </div>
+    <div class="rec-breakdown" style="margin-top:8px"><span><b>Pickup</b> ${fmtRec(s.cats.game)}</span><span><b>RTT</b> ${fmtRec(s.cats.rtt)}</span><span><b>GT</b> ${fmtRec(s.cats.gt)}</span></div>
+    ${upcoming.length?`<div class="prof-sec-title">Upcoming (${upcoming.length})</div><div class="prof-upcoming">${upcoming.map(e=>`<div class="row ${e.type}"><span class="badge ${e.type}">${TYPE_LABEL[e.type]}</span><span>${esc(e.name)}</span><span class="faint" style="margin-left:auto">${esc(fmtDate(e.date))}${e.time?" · "+fmtTime(e.time):""}</span></div>`).join("")}</div>`:""}
+    <div class="prof-sec-title">Match log${isMe?"":" (public)"}</div>
+    <div id="profMatches" style="display:flex;flex-direction:column;gap:10px"></div>
+  `;
+  renderMatchList($("#profMatches"), p.id, isMe);
+}
+$("#profBack").onclick=()=>showView("players");
 
 /* ============================================================
    OVERLAY HELPERS
@@ -1281,13 +1332,13 @@ document.addEventListener("click", e=>{
   const edit=e.target.closest("[data-edit]");
   if(edit){ openEvent(state.events.find(x=>x.id===edit.dataset.edit)); return; }
   if(e.target.closest("[data-logmatch]")){ openMatch(null); return; }
-  if(e.target.closest("[data-openlog]")){ openLog(); return; }
-  if(e.target.closest("#logAdd")){ openMatch(null); return; }
   const me2=e.target.closest("[data-medit]");
   if(me2){ openMatch(state.matches.find(x=>x.id===me2.dataset.medit)); return; }
   const md=e.target.closest("[data-mdel]");
   if(md){ deleteMatch(md.dataset.mdel); return; }
-  if(e.target.closest("#editMeCard")){ openMyProfile(); return; }
+  if(e.target.closest("#profEdit")){ openMyProfile(); return; }
+  const prof=e.target.closest("[data-profile]");
+  if(prof){ showProfile(prof.dataset.profile); return; }
   const day=e.target.closest(".day");
   if(day){ openDay(day.dataset.date); return; }
   const nt=e.target.closest("[data-new]");
@@ -1295,8 +1346,8 @@ document.addEventListener("click", e=>{
 });
 $("#newBtn").onclick=()=>openEvent(null,"game");
 $("#logBtn").onclick=()=>openMatch(null);
-$("#meBtn").onclick=()=>{ showView("players"); setTimeout(()=>{ const c=document.getElementById("myCard"); if(c) c.scrollIntoView({behavior:"smooth",block:"center"}); },40); };
-$("#editMeBtn").onclick=()=>openMyProfile();
+$("#meBtn").onclick=()=>{ if(state.user) showProfile(state.user.uid); };
+$("#editMeBtn").onclick=()=>{ if(state.user) showProfile(state.user.uid); };
 
 /* ---------- Go ---------- */
 showView("calendar");
