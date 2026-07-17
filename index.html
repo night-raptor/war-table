@@ -203,9 +203,9 @@
   .empty .big { font-size: 15px; color: var(--txt-dim); margin-bottom: 6px; }
 
   /* Modal / overlay */
-  .overlay { position: fixed; inset: 0; background: rgba(6,7,10,.78); backdrop-filter: blur(4px); z-index: 100; display: grid; place-items: center; padding: 20px; }
+  .overlay { position: fixed; inset: 0; background: rgba(6,7,10,.78); backdrop-filter: blur(4px); z-index: 100; display: flex; justify-content: center; align-items: safe center; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 20px; }
   .overlay[hidden] { display: none; }
-  .modal { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); width: 100%; max-width: 500px; max-height: 92vh; overflow: auto; box-shadow: var(--shadow); }
+  .modal { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); width: 100%; max-width: 500px; max-height: 92vh; max-height: 92dvh; overflow: auto; -webkit-overflow-scrolling: touch; box-shadow: var(--shadow); }
   .modal h3 { padding: 18px 20px; border-bottom: 1px solid var(--line); font-size: 17px; display: flex; align-items: center; gap: 10px; }
   .modal form, .modal .body { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
   .field label { display: block; font-size: 12.5px; color: var(--txt-dim); margin-bottom: 6px; font-weight: 600; }
@@ -266,7 +266,10 @@
     .rbtn { padding: 9px 13px; font-size: 13px; }
     select, input, textarea { font-size: 16px; }   /* prevents iOS auto-zoom on focus */
     .modal h3 { position: sticky; top: 0; background: var(--panel); z-index: 1; }
-    .modal { max-height: 94vh; border-radius: 16px 16px 0 0; }
+    .modal { max-height: 94vh; max-height: 94dvh; border-radius: 16px 16px 0 0; }
+    .overlay { align-items: flex-start; padding: 14px 12px calc(20px + env(safe-area-inset-bottom, 0px)); }
+    /* keep the action buttons pinned in view so Save is always reachable */
+    .modal-foot { position: sticky; bottom: 0; background: var(--panel); margin: 8px -20px -18px; padding: 12px 20px calc(14px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); }
   }
   /* Phones: turn calendar event labels into compact dots (tap a day to see details) */
   @media (max-width: 560px) {
@@ -328,6 +331,12 @@
             <option value="#c9a24a">Gold</option><option value="#2fb9a3">Teal</option>
             <option value="#c0392b">Crimson</option><option value="#8a6cff">Violet</option>
             <option value="#3fae63">Green</option><option value="#e0902b">Amber</option>
+            <option value="#3b82f6">Blue</option><option value="#22c3d6">Cyan</option>
+            <option value="#e0559b">Pink</option><option value="#e8602c">Orange</option>
+            <option value="#8bc34a">Lime</option><option value="#a06be0">Purple</option>
+            <option value="#d9d2c5">Bone</option><option value="#6b7280">Slate</option>
+            <option value="#7a1616">Blood</option><option value="#1f9e6b">Jade</option>
+            <option value="#f2d14e">Sunburst</option><option value="#5b6ee0">Indigo</option>
           </select>
         </div>
       </div>
@@ -508,6 +517,12 @@
             <option value="#c9a24a">Gold</option><option value="#2fb9a3">Teal</option>
             <option value="#c0392b">Crimson</option><option value="#8a6cff">Violet</option>
             <option value="#3fae63">Green</option><option value="#e0902b">Amber</option>
+            <option value="#3b82f6">Blue</option><option value="#22c3d6">Cyan</option>
+            <option value="#e0559b">Pink</option><option value="#e8602c">Orange</option>
+            <option value="#8bc34a">Lime</option><option value="#a06be0">Purple</option>
+            <option value="#d9d2c5">Bone</option><option value="#6b7280">Slate</option>
+            <option value="#7a1616">Blood</option><option value="#1f9e6b">Jade</option>
+            <option value="#f2d14e">Sunburst</option><option value="#5b6ee0">Indigo</option>
           </select>
         </div>
       </div>
