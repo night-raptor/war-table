@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="description" content="Live battle calendar for our Warhammer 40k group — accounts, RSVPs, tournaments and win/loss records, synced in real time.">
 <meta name="theme-color" content="#0e0f13">
 <title>War Table — 40k Battle Calendar</title>
@@ -154,6 +154,9 @@
   .pcard.me { border-color: rgba(201,162,74,.5); box-shadow: inset 0 0 0 1px rgba(201,162,74,.15); }
   .pcard .phead { display: flex; align-items: center; gap: 11px; }
   .ava.lg { width: 44px; height: 44px; font-size: 17px; }
+  .ava.xl { width: 84px; height: 84px; }
+  .prof-preview { display: flex; flex-direction: column; align-items: center; gap: 7px; margin-bottom: 6px; }
+  .prof-preview .pp-tier { font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; border: 1px solid; }
   .pcard .pname { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 7px; }
   .youtag { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #1a1400; background: var(--gold); padding: 2px 6px; border-radius: 5px; }
   .factions { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -240,14 +243,35 @@
   .fab { position: fixed; right: 22px; bottom: 22px; z-index: 40; }
 
   @media (max-width: 720px) {
-    header.app { flex-wrap: wrap; padding: 12px 14px; }
-    nav.tabs { top: 0; position: static; }
-    main { padding: 14px; }
-    .day { min-height: 70px; }
-    .day .dnum { font-size: 12px; }
-    .pip { font-size: 9px; padding: 1px 5px; }
-    .row2, .row3 { grid-template-columns: 1fr; }
+    header.app { flex-wrap: wrap; gap: 10px 12px; padding: calc(11px + env(safe-area-inset-top, 0px)) calc(14px + env(safe-area-inset-right, 0px)) 11px calc(14px + env(safe-area-inset-left, 0px)); }
+    nav.tabs { top: 0; position: sticky; padding: 8px 12px 0; }
+    .tab { padding: 12px 14px; }
+    main { padding: 14px; padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px)); }
+    .view-head h2 { font-size: 18px; }
     .brand .sub { display: none; }
+    .brand h1 { font-size: 17px; }
+    .sigil { width: 34px; height: 34px; }
+    .whoami { margin-left: auto; }
+    .whoami .nm { font-size: 12px; max-width: 32vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .row2, .row3 { grid-template-columns: 1fr; }
+    .cal-grid, .weekdays { gap: 4px; }
+    .day { min-height: 62px; padding: 5px; }
+    .day .dnum { font-size: 12px; }
+    /* bigger touch targets */
+    .btn { padding: 11px 15px; }
+    .btn.sm { padding: 9px 12px; }
+    .rbtn { padding: 9px 13px; font-size: 13px; }
+    select, input, textarea { font-size: 16px; }   /* prevents iOS auto-zoom on focus */
+    .modal h3 { position: sticky; top: 0; background: var(--panel); z-index: 1; }
+    .modal { max-height: 94vh; border-radius: 16px 16px 0 0; }
+  }
+  /* Phones: turn calendar event labels into compact dots (tap a day to see details) */
+  @media (max-width: 560px) {
+    .weekdays span { font-size: 10px; }
+    .pip { font-size: 0; line-height: 0; width: 7px; height: 7px; padding: 0; border-radius: 50%; }
+    .pip.more { width: auto; height: auto; font-size: 9px; line-height: 1.2; padding: 1px 5px; border-radius: 20px; }
+    .pips { gap: 3px; }
+    .day { min-height: 56px; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
@@ -385,7 +409,6 @@
     </section>
   </main>
 
-  <button class="btn primary fab" id="fab" aria-label="Create new event">+ New</button>
 </div>
 
 <!-- EVENT MODAL -->
@@ -421,6 +444,18 @@
         <button type="submit" class="btn primary">Save event</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- DAY DETAIL MODAL -->
+<div class="overlay" id="dayOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="dayTitle">
+  <div class="modal">
+    <h3 id="dayTitle">Day</h3>
+    <div class="body">
+      <div id="dayBody" style="display:flex;flex-direction:column;gap:12px"></div>
+      <button type="button" class="btn primary block" id="dayAdd">+ Add event this day</button>
+      <div class="modal-foot"><button type="button" class="btn ghost" data-close>Close</button></div>
+    </div>
   </div>
 </div>
 
@@ -460,6 +495,7 @@
     <h3 id="plTitle">My profile</h3>
     <form id="playerForm">
       <p class="hint" id="welcomeHint" hidden style="margin:0 0 2px">Welcome to the group! Set up your roster — you can change any of this later.</p>
+      <div class="prof-preview"><span class="ava xl" id="plAvatar"></span><span class="pp-tier" id="plTierLabel"></span></div>
       <div class="field"><label for="plName">Name</label><input id="plName" required placeholder="Player name"></div>
       <div class="field"><label for="plFactions">Factions / armies <span class="hint">(comma separated)</span></label><input id="plFactions" placeholder="e.g. Necrons, Space Wolves"></div>
       <div class="row2">
@@ -857,7 +893,7 @@ function renderPlayers(){
   $("#playerSub").textContent = `${players.length} in the group`;
 }
 
-function renderAll(){ if($("#app").hidden) return; renderCalendar(); renderGames(); renderTourneys(); renderPlayers(); }
+function renderAll(){ if($("#app").hidden) return; renderCalendar(); renderGames(); renderTourneys(); renderPlayers(); const dm=document.getElementById("dayOverlay"); if(dm && !dm.hidden) renderDay(); }
 
 /* ============================================================
    VIEW SWITCHING
@@ -951,9 +987,23 @@ function openMyProfile(welcome=false){
   $("#rW").value=c.rtt.w;  $("#rL").value=c.rtt.l;  $("#rD").value=c.rtt.d;
   $("#tW").value=c.gt.w;   $("#tL").value=c.gt.l;   $("#tD").value=c.gt.d;
   $("#plErr").textContent="";
+  updateProfilePreview();
   openOverlay(plOverlay,"#plFactions");
 }
 const nn = id => Math.max(0, Number($(id).value)||0);
+function updateProfilePreview(){
+  const bg = $("#plColor").value;
+  const temp = { color:bg, rec:{ game:{w:nn("#gW"),l:nn("#gL"),d:nn("#gD")}, rtt:{w:nn("#rW"),l:nn("#rL"),d:nn("#rD")}, gt:{w:nn("#tW"),l:nn("#tL"),d:nn("#tD")} } };
+  const { tier } = tierOf(temp);
+  const av = $("#plAvatar");
+  av.style.background = bg;
+  av.style.boxShadow = "0 0 0 3px "+tier.color;
+  av.innerHTML = skullSvg(tier.color, bg);
+  const lbl = $("#plTierLabel");
+  lbl.textContent = tier.name;
+  lbl.style.color = tier.color; lbl.style.borderColor = tier.color; lbl.style.background = tier.color+"22";
+}
+["#plColor","#gW","#gL","#gD","#rW","#rL","#rD","#tW","#tL","#tD"].forEach(id=>{ const e=$(id); if(e) e.addEventListener("input", updateProfilePreview); });
 $("#playerForm").addEventListener("submit", async (e)=>{
   e.preventDefault();
   const data={
@@ -974,6 +1024,20 @@ $("#playerForm").addEventListener("submit", async (e)=>{
     closeOverlay(plOverlay); toast("Profile saved");
   } catch(err){ $("#plErr").textContent="Couldn't save — "+(err.message||"try again."); }
 });
+
+/* ---------- Day detail modal ---------- */
+const dayOverlay=$("#dayOverlay");
+let currentDay=null;
+function openDay(date){ currentDay=date; renderDay(); openOverlay(dayOverlay,"#dayAdd"); }
+function renderDay(){
+  if(!currentDay) return;
+  $("#dayTitle").textContent = fmtLong(currentDay) + (currentDay===TODAY ? "  ·  Today" : "");
+  const list = state.events.filter(e=>e.date===currentDay).sort((a,b)=>(a.time||"99").localeCompare(b.time||"99"));
+  const body=$("#dayBody"); body.innerHTML="";
+  if(!list.length){ body.appendChild(el(`<div class="empty" style="padding:26px 16px"><div class="big">Nothing scheduled</div><div>No games or tournaments this day yet.</div></div>`)); }
+  else list.forEach(ev=>body.appendChild(eventCard(ev)));
+}
+$("#dayAdd").onclick=()=>{ const d=currentDay; closeOverlay(dayOverlay); openEvent(null,"game",d); };
 
 /* ---------- Log result modal ---------- */
 const rsOverlay=$("#resultOverlay");
@@ -1018,12 +1082,11 @@ document.addEventListener("click", e=>{
   if(e.target.closest("[data-openresult]")){ openResult(); return; }
   if(e.target.closest("#editMeCard")){ openMyProfile(); return; }
   const day=e.target.closest(".day");
-  if(day){ openEvent(null,"game",day.dataset.date); return; }
+  if(day){ openDay(day.dataset.date); return; }
   const nt=e.target.closest("[data-new]");
   if(nt){ openEvent(null,nt.dataset.new); return; }
 });
 $("#newBtn").onclick=()=>openEvent(null,"game");
-$("#fab").onclick=()=>openEvent(null,"game");
 $("#editMeBtn").onclick=()=>openMyProfile();
 
 /* ---------- Go ---------- */
