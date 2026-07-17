@@ -32,6 +32,7 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
+  [hidden] { display: none !important; }   /* ensure the hidden attribute always wins over layout rules */
   body {
     background:
       radial-gradient(1200px 600px at 80% -10%, rgba(201,162,74,.06), transparent 60%),
@@ -217,6 +218,7 @@
 
   /* Auth / setup screens */
   .gate { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+  .gate[hidden] { display: none !important; }
   .gate-card { width: 100%; max-width: 420px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 26px; }
   .gate-card .brand { justify-content: center; margin: 0 0 8px; }
   .gate-card h2 { text-align: center; font-size: 22px; }
