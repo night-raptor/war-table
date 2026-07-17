@@ -535,6 +535,7 @@
           <div class="rg-lab">GT</div><input id="tW" type="number" min="0" value="0" aria-label="GT wins"><input id="tL" type="number" min="0" value="0" aria-label="GT losses"><input id="tD" type="number" min="0" value="0" aria-label="GT draws">
         </div>
       </div>
+      <p class="hint" id="myId" style="margin:0;word-break:break-all;cursor:pointer" title="Tap to copy"></p>
       <div class="err" id="plErr" role="alert"></div>
       <div class="modal-foot">
         <button type="button" class="btn ghost" data-close>Cancel</button>
@@ -557,6 +558,11 @@
     messagingSenderId: "249164874139",
     appId: "1:249164874139:web:b296aa85cbfdcb1480613e"
   };
+  // Admins can edit/delete ANY event. Paste admin player IDs here (find yours in
+  // Edit Profile → "Your ID"). Must ALSO be added to the Firestore rules — see SETUP.md.
+  window.ADMIN_UIDS = [
+    // "paste-your-uid-here"
+  ];
 </script>
 
 <script type="module">
@@ -598,6 +604,8 @@ function initials(name){ return (name||"?").trim().split(/\s+/).map(w=>w[0]).sli
 const state = { players: {}, events: [], user: null, me: null };
 let calCursor = startOfMonth(new Date());
 const player = id => state.players[id];
+const ADMIN_UIDS = window.ADMIN_UIDS || [];
+function isAdmin(){ return !!state.user && ADMIN_UIDS.includes(state.user.uid); }
 
 /* ============================================================
    FIREBASE BOOT
@@ -810,7 +818,7 @@ function eventCard(ev){
   if(ev.points) bits.push(`<span><span class="ico">⚔️</span> ${esc(ev.points)}pts</span>`);
   if(ev.cap) bits.push(`<span><span class="ico">👥</span> cap ${ev.cap}</span>`);
   if(ev.link) bits.push(`<a href="${esc(ev.link)}" target="_blank" rel="noopener"><span class="ico">🔗</span> Register</a>`);
-  const canEdit = ev.createdBy === state.user.uid;
+  const canEdit = ev.createdBy === state.user.uid || isAdmin();
   return el(`<div class="card ${t}">
     <div class="card-top">
       <span class="badge ${t}">${TYPE_LABEL[t]}</span>
@@ -1005,6 +1013,9 @@ function openMyProfile(welcome=false){
   $("#rW").value=c.rtt.w;  $("#rL").value=c.rtt.l;  $("#rD").value=c.rtt.d;
   $("#tW").value=c.gt.w;   $("#tL").value=c.gt.l;   $("#tD").value=c.gt.d;
   $("#plErr").textContent="";
+  const idEl=$("#myId");
+  idEl.textContent = state.user ? ("Your ID: "+state.user.uid+(isAdmin()?"  ·  ★ Admin":"")) : "";
+  idEl.onclick = ()=>{ if(state.user){ navigator.clipboard && navigator.clipboard.writeText(state.user.uid); toast("ID copied"); } };
   updateProfilePreview();
   openOverlay(plOverlay,"#plFactions");
 }
