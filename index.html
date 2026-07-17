@@ -65,6 +65,9 @@
   .whoami { display: flex; align-items: center; gap: 10px; }
   .whoami .nm { font-size: 13px; color: var(--txt-dim); }
   .whoami .nm b { color: var(--txt); }
+  .mebtn { gap: 8px; padding: 5px 12px 5px 6px; }
+  .mebtn .ava { width: 24px; height: 24px; }
+  .mebtn b { font-weight: 600; }
 
   select, input, textarea { background: var(--panel-2); color: var(--txt); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 9px 11px; font-size: 14px; font-family: inherit; width: 100%; }
   select:hover { border-color: #3a4150; }
@@ -370,9 +373,10 @@
       <div><h1>War Table</h1><div class="sub">40k Battle Calendar</div></div>
     </div>
     <div class="whoami">
-      <span class="nm">Logged in as <b id="meName">—</b></span>
+      <button class="btn sm ghost mebtn" id="meBtn" aria-label="View my profile"><span class="ava" id="meAva"></span><b id="meName">—</b></button>
       <button class="btn sm ghost" id="signOutBtn">Sign out</button>
     </div>
+    <button class="btn sm" id="logBtn">⚔️ Log game</button>
     <button class="btn primary" id="newBtn" aria-haspopup="dialog">+ New event</button>
   </header>
 
@@ -944,7 +948,7 @@ function renderPlayers(){
   players.forEach(({p,t})=>{
     const s=t.s, tier=t.tier, isMe=p.id===state.user.uid;
     const upcoming = state.events.filter(e=>e.rsvps && e.rsvps[p.id]==="in" && e.date>=TODAY).length;
-    const card=el(`<div class="pcard ${isMe?"me":""}">
+    const card=el(`<div class="pcard ${isMe?"me":""}" ${isMe?'id="myCard"':''}>
       <div class="phead">${avatar(p,"lg")}
         <div><div class="pname">${esc(p.name)}${isMe?'<span class="youtag">You</span>':''}</div>
         <div class="faint" style="font-size:12px">${p.points?esc(p.points)+"pts · ":""}${upcoming} upcoming</div></div>
@@ -969,7 +973,12 @@ function renderPlayers(){
   $("#playerSub").textContent = `${players.length} in the group`;
 }
 
-function renderAll(){ if($("#app").hidden) return; renderCalendar(); renderGames(); renderTourneys(); renderPlayers(); const dm=document.getElementById("dayOverlay"); if(dm && !dm.hidden) renderDay(); const lm=document.getElementById("logOverlay"); if(lm && !lm.hidden) renderLog(); }
+function setHeaderMe(){
+  if(!state.me) return;
+  $("#meName").textContent = state.me.name || "You";
+  const av=$("#meAva"); if(av){ const { tier }=tierOf(state.me); const bg=state.me.color||"#c9a24a"; av.style.background=bg; av.style.boxShadow="0 0 0 2px "+tier.color; av.innerHTML=skullSvg(tier.color,bg); }
+}
+function renderAll(){ if($("#app").hidden) return; setHeaderMe(); renderCalendar(); renderGames(); renderTourneys(); renderPlayers(); const dm=document.getElementById("dayOverlay"); if(dm && !dm.hidden) renderDay(); const lm=document.getElementById("logOverlay"); if(lm && !lm.hidden) renderLog(); }
 
 /* ============================================================
    VIEW SWITCHING
@@ -1285,6 +1294,8 @@ document.addEventListener("click", e=>{
   if(nt){ openEvent(null,nt.dataset.new); return; }
 });
 $("#newBtn").onclick=()=>openEvent(null,"game");
+$("#logBtn").onclick=()=>openMatch(null);
+$("#meBtn").onclick=()=>{ showView("players"); setTimeout(()=>{ const c=document.getElementById("myCard"); if(c) c.scrollIntoView({behavior:"smooth",block:"center"}); },40); };
 $("#editMeBtn").onclick=()=>openMyProfile();
 
 /* ---------- Go ---------- */
