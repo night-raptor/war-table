@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Live battle calendar for our Warhammer 40k group — accounts, RSVPs, tournaments and win/loss records, synced in real time.">
+<meta name="theme-color" content="#0e0f13">
+<title>War Table — 40k Battle Calendar</title>
+<style>
+  :root {
+    --bg: #0e0f13;
+    --bg-2: #14161c;
+    --panel: #191c24;
+    --panel-2: #1f232d;
+    --line: #2a2f3a;
+    --line-soft: #23272f;
+    --txt: #e9e6df;
+    --txt-dim: #a6a29a;
+    --txt-faint: #6f6b63;
+    --gold: #c9a24a;
+    --gold-soft: #e0c073;
+    --crimson: #c0392b;
+    --teal: #2fb9a3;
+    --violet: #8a6cff;
+    --amber: #e0902b;
+    --green: #3fae63;
+    --red: #d9534f;
+    --radius: 14px;
+    --radius-sm: 9px;
+    --shadow: 0 10px 30px rgba(0,0,0,.45);
+    --font: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(201,162,74,.06), transparent 60%),
+      radial-gradient(900px 500px at -10% 20%, rgba(192,57,43,.06), transparent 55%),
+      var(--bg);
+    color: var(--txt);
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  a { color: var(--gold-soft); }
+  button { font-family: inherit; }
+  h1,h2,h3 { margin: 0; font-weight: 700; letter-spacing: .2px; }
+  ::selection { background: rgba(201,162,74,.3); }
+  :focus-visible { outline: 2px solid var(--gold-soft); outline-offset: 2px; border-radius: 4px; }
+
+  .skip-link { position: absolute; left: -999px; top: 0; z-index: 200; background: var(--gold); color: #1a1400; padding: 10px 16px; border-radius: 0 0 8px 0; font-weight: 700; }
+  .skip-link:focus { left: 0; }
+
+  /* Header */
+  header.app { position: sticky; top: 0; z-index: 60; display: flex; align-items: center; gap: 16px; padding: 14px 22px; background: rgba(14,15,19,.85); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 12px; margin-right: auto; }
+  .sigil { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border: 1px solid rgba(201,162,74,.5); border-radius: 10px; background: linear-gradient(160deg, #23262f, #14161c); color: var(--gold-soft); box-shadow: inset 0 0 12px rgba(201,162,74,.14); }
+  .brand h1 { font-size: 18px; }
+  .brand .sub { font-size: 11px; color: var(--txt-faint); text-transform: uppercase; letter-spacing: 2px; }
+
+  .whoami { display: flex; align-items: center; gap: 10px; }
+  .whoami .nm { font-size: 13px; color: var(--txt-dim); }
+  .whoami .nm b { color: var(--txt); }
+
+  select, input, textarea { background: var(--panel-2); color: var(--txt); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 9px 11px; font-size: 14px; font-family: inherit; width: 100%; }
+  select:hover { border-color: #3a4150; }
+  textarea { resize: vertical; min-height: 70px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: var(--panel-2); color: var(--txt); padding: 9px 14px; border-radius: var(--radius-sm); cursor: pointer; font-size: 14px; font-weight: 600; transition: .15s; white-space: nowrap; }
+  .btn:hover { border-color: #47505f; background: #262b36; }
+  .btn.primary { background: linear-gradient(180deg, var(--gold-soft), var(--gold)); color: #1a1400; border-color: var(--gold); }
+  .btn.primary:hover { filter: brightness(1.06); }
+  .btn.ghost { background: transparent; }
+  .btn.sm { padding: 6px 10px; font-size: 12.5px; }
+  .btn.danger:hover { border-color: var(--red); color: #ffb0ad; }
+  .btn.block { width: 100%; justify-content: center; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* Tabs */
+  nav.tabs { display: flex; gap: 4px; padding: 10px 22px 0; border-bottom: 1px solid var(--line); background: var(--bg-2); position: sticky; top: 69px; z-index: 50; overflow-x: auto; }
+  .tab { border: none; background: none; color: var(--txt-dim); padding: 11px 16px; cursor: pointer; font-size: 14px; font-weight: 600; border-bottom: 2px solid transparent; white-space: nowrap; border-radius: 6px 6px 0 0; }
+  .tab:hover { color: var(--txt); background: rgba(255,255,255,.03); }
+  .tab[aria-selected="true"] { color: var(--gold-soft); border-bottom-color: var(--gold); }
+
+  main { max-width: 1150px; margin: 0 auto; padding: 22px; }
+  .view-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .view-head h2 { font-size: 20px; margin-right: auto; }
+  .muted { color: var(--txt-dim); }
+  .faint { color: var(--txt-faint); }
+
+  /* Calendar */
+  .cal-nav { display: flex; align-items: center; gap: 10px; }
+  .cal-nav .month { font-size: 18px; font-weight: 700; min-width: 175px; text-align: center; }
+  .weekdays, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+  .weekdays { margin-bottom: 8px; }
+  .weekdays span { text-align: center; font-size: 11px; letter-spacing: 1.5px; color: var(--txt-faint); text-transform: uppercase; }
+  .day { background: var(--panel); border: 1px solid var(--line-soft); border-radius: 10px; min-height: 96px; padding: 7px; cursor: pointer; transition: .12s; text-align: left; display: flex; flex-direction: column; gap: 4px; color: inherit; }
+  .day:hover { border-color: #3a4150; background: var(--panel-2); }
+  .day.other { opacity: .38; }
+  .day.today { border-color: var(--gold); box-shadow: inset 0 0 0 1px rgba(201,162,74,.35); }
+  .day .dnum { font-size: 13px; color: var(--txt-dim); font-weight: 700; }
+  .day.today .dnum { color: var(--gold-soft); }
+  .pips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; }
+  .pip { font-size: 10.5px; padding: 2px 6px; border-radius: 20px; font-weight: 700; border: 1px solid transparent; }
+  .pip.game { background: rgba(47,185,163,.14); color: #7fe9d7; border-color: rgba(47,185,163,.35); }
+  .pip.rtt  { background: rgba(224,144,43,.14); color: #f2b874; border-color: rgba(224,144,43,.35); }
+  .pip.gt   { background: rgba(192,57,43,.16); color: #f0938a; border-color: rgba(192,57,43,.4); }
+  .pip.more { background: var(--panel-2); color: var(--txt-dim); }
+
+  /* Collapsible groups + cards */
+  .day-group { margin-bottom: 14px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--panel); }
+  .day-group > summary { list-style: none; cursor: pointer; padding: 14px 16px; display: flex; align-items: center; gap: 12px; background: var(--panel-2); }
+  .day-group > summary::-webkit-details-marker { display: none; }
+  .day-group[open] > summary { border-bottom: 1px solid var(--line); }
+  .caret { transition: transform .2s; color: var(--txt-faint); }
+  .day-group[open] .caret { transform: rotate(90deg); }
+  .dg-date { font-weight: 700; font-size: 15px; }
+  .dg-count { margin-left: auto; font-size: 12px; color: var(--txt-dim); background: var(--bg-2); padding: 3px 10px; border-radius: 20px; border: 1px solid var(--line); }
+  .dg-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+
+  .card { border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-2); padding: 14px; display: flex; flex-direction: column; gap: 10px; border-left: 4px solid var(--line); }
+  .card.game { border-left-color: var(--teal); }
+  .card.rtt  { border-left-color: var(--amber); }
+  .card.gt   { border-left-color: var(--crimson); }
+  .card-top { display: flex; align-items: flex-start; gap: 10px; }
+  .card-title { font-size: 16px; font-weight: 700; }
+  .badge { font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; padding: 3px 8px; border-radius: 6px; }
+  .badge.game { background: rgba(47,185,163,.16); color: #7fe9d7; }
+  .badge.rtt  { background: rgba(224,144,43,.16); color: #f2b874; }
+  .badge.gt   { background: rgba(192,57,43,.18); color: #f0938a; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--txt-dim); }
+  .meta-row .ico { color: var(--txt-faint); }
+
+  .attend { display: flex; flex-direction: column; gap: 8px; }
+  .avatars { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 20px; padding: 3px 10px 3px 3px; }
+  .ava { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #10120f; flex: none; }
+  .chip.maybe { opacity: .8; }
+  .rsvp-bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .rsvp-bar .lbl { font-size: 12px; color: var(--txt-faint); margin-right: 2px; }
+  .rbtn { border: 1px solid var(--line); background: var(--panel-2); color: var(--txt-dim); padding: 5px 11px; border-radius: 20px; cursor: pointer; font-size: 12.5px; font-weight: 700; }
+  .rbtn:hover { color: var(--txt); border-color: #47505f; }
+  .rbtn.in.on   { background: rgba(63,174,99,.2); color: #8fe0a6; border-color: rgba(63,174,99,.5); }
+  .rbtn.maybe.on{ background: rgba(224,144,43,.2); color: #f2b874; border-color: rgba(224,144,43,.5); }
+  .rbtn.out.on  { background: rgba(217,83,79,.18); color: #f2a29f; border-color: rgba(217,83,79,.5); }
+
+  /* Player cards */
+  .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .pcard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .pcard.me { border-color: rgba(201,162,74,.5); box-shadow: inset 0 0 0 1px rgba(201,162,74,.15); }
+  .pcard .phead { display: flex; align-items: center; gap: 11px; }
+  .ava.lg { width: 44px; height: 44px; font-size: 17px; }
+  .pcard .pname { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 7px; }
+  .youtag { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #1a1400; background: var(--gold); padding: 2px 6px; border-radius: 5px; }
+  .factions { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ftag { font-size: 12px; padding: 3px 9px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); color: var(--txt-dim); }
+  .record { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+  .rec-num { text-align: center; }
+  .rec-num .n { font-size: 20px; font-weight: 800; line-height: 1; }
+  .rec-num .n.w { color: var(--green); }
+  .rec-num .n.l { color: var(--red); }
+  .rec-num .n.d { color: var(--txt-dim); }
+  .rec-num .k { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--txt-faint); margin-top: 3px; }
+  .rec-rate { margin-left: auto; text-align: right; }
+  .rec-rate .pct { font-size: 18px; font-weight: 800; color: var(--gold-soft); }
+  .rec-rate .k { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--txt-faint); }
+  .logrow { display: flex; gap: 6px; flex-wrap: wrap; }
+  .logrow .btn { flex: 1; justify-content: center; }
+  .tierbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .tier-badge { font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; border: 1px solid; }
+  .tier-prog { font-size: 11.5px; color: var(--txt-faint); }
+  .rec-breakdown { font-size: 11.5px; display: flex; flex-wrap: wrap; gap: 10px; color: var(--txt-faint); }
+  .rec-breakdown b { color: var(--txt-dim); font-weight: 700; }
+  .rank-legend { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); margin-bottom: 16px; }
+  .rank-legend > summary { cursor: pointer; padding: 12px 16px; font-weight: 700; font-size: 14px; list-style: none; display: flex; align-items: center; gap: 8px; }
+  .rank-legend > summary::-webkit-details-marker { display: none; }
+  .rank-legend > summary::before { content: "▶"; color: var(--txt-faint); font-size: 11px; transition: .2s; }
+  .rank-legend[open] > summary::before { transform: rotate(90deg); }
+  .legend-body { padding: 0 16px 16px; font-size: 13px; color: var(--txt-dim); line-height: 1.6; }
+  .legend-body ul { margin: 6px 0; padding-left: 20px; }
+  .legend-body b { color: var(--txt); }
+  .tier-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .tl-chip { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; background: var(--bg-2); border: 1px solid var(--line); border-radius: 20px; padding: 4px 11px 4px 6px; }
+  .tl-dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+  .tl-chip .tl-min { color: var(--txt-faint); font-weight: 600; }
+  .rec-grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap: 6px; align-items: center; }
+  .rec-grid .rg-h { text-align: center; font-size: 11px; color: var(--txt-faint); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+  .rec-grid .rg-lab { font-size: 12.5px; color: var(--txt-dim); font-weight: 600; }
+  .rec-grid input { padding: 7px; text-align: center; }
+  .grid-lbl { display: block; font-size: 12.5px; color: var(--txt-dim); margin-bottom: 8px; font-weight: 600; }
+  .seg.rseg .opt:has(input:checked) { border-color: var(--gold); color: var(--gold-soft); background: rgba(201,162,74,.12); }
+  .wtag { display: block; font-size: 10px; color: var(--txt-faint); font-weight: 700; margin-top: 2px; }
+
+  .empty { text-align: center; color: var(--txt-faint); padding: 50px 20px; border: 1px dashed var(--line); border-radius: var(--radius); }
+  .empty .big { font-size: 15px; color: var(--txt-dim); margin-bottom: 6px; }
+
+  /* Modal / overlay */
+  .overlay { position: fixed; inset: 0; background: rgba(6,7,10,.78); backdrop-filter: blur(4px); z-index: 100; display: grid; place-items: center; padding: 20px; }
+  .overlay[hidden] { display: none; }
+  .modal { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); width: 100%; max-width: 500px; max-height: 92vh; overflow: auto; box-shadow: var(--shadow); }
+  .modal h3 { padding: 18px 20px; border-bottom: 1px solid var(--line); font-size: 17px; display: flex; align-items: center; gap: 10px; }
+  .modal form, .modal .body { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .field label { display: block; font-size: 12.5px; color: var(--txt-dim); margin-bottom: 6px; font-weight: 600; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg .opt { flex: 1; min-width: 90px; text-align: center; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); cursor: pointer; font-weight: 700; font-size: 13px; color: var(--txt-dim); background: var(--panel-2); }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg .opt.sel-game { border-color: var(--teal); color: #7fe9d7; background: rgba(47,185,163,.12); }
+  .seg .opt.sel-rtt  { border-color: var(--amber); color: #f2b874; background: rgba(224,144,43,.12); }
+  .seg .opt.sel-gt   { border-color: var(--crimson); color: #f0938a; background: rgba(192,57,43,.14); }
+  .modal-foot { display: flex; gap: 10px; justify-content: flex-end; padding-top: 4px; }
+  .hint { font-size: 12px; color: var(--txt-faint); }
+  .err { color: #f2a29f; font-size: 13px; min-height: 1px; }
+
+  /* Auth / setup screens */
+  .gate { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+  .gate-card { width: 100%; max-width: 420px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 26px; }
+  .gate-card .brand { justify-content: center; margin: 0 0 8px; }
+  .gate-card h2 { text-align: center; font-size: 22px; }
+  .gate-sub { text-align: center; color: var(--txt-dim); font-size: 13px; margin: 6px 0 20px; }
+  .gate form { display: flex; flex-direction: column; gap: 13px; }
+  .or-divider { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: var(--txt-faint); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  .or-divider::before, .or-divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .gbtn { justify-content: center; gap: 10px; background: #fff; color: #1f1f1f; border-color: #fff; font-weight: 600; }
+  .gbtn:hover { background: #f1f1f1; border-color: #f1f1f1; }
+  .auth-toggle { text-align: center; font-size: 13px; color: var(--txt-dim); margin-top: 16px; }
+  .auth-toggle button { background: none; border: none; color: var(--gold-soft); cursor: pointer; font-weight: 700; font-size: 13px; }
+  .setup-steps { font-size: 13.5px; color: var(--txt-dim); line-height: 1.7; }
+  .setup-steps code { background: var(--bg-2); padding: 1px 6px; border-radius: 5px; color: var(--gold-soft); font-size: 12.5px; }
+  .setup-steps ol { padding-left: 20px; }
+
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--panel-2); border: 1px solid var(--gold); color: var(--txt); padding: 12px 20px; border-radius: 10px; box-shadow: var(--shadow); z-index: 300; opacity: 0; transition: .25s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .fab { position: fixed; right: 22px; bottom: 22px; z-index: 40; }
+
+  @media (max-width: 720px) {
+    header.app { flex-wrap: wrap; padding: 12px 14px; }
+    nav.tabs { top: 0; position: static; }
+    main { padding: 14px; }
+    .day { min-height: 70px; }
+    .day .dnum { font-size: 12px; }
+    .pip { font-size: 9px; padding: 1px 5px; }
+    .row2, .row3 { grid-template-columns: 1fr; }
+    .brand .sub { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<!-- ============ SETUP GATE (shown if Firebase not configured) ============ -->
+<div class="gate" id="setupGate" hidden>
+  <div class="gate-card">
+    <div class="brand"><div class="sigil" id="sigilSetup" aria-hidden="true"></div></div>
+    <h2>Almost ready</h2>
+    <p class="gate-sub">This app needs a free Firebase backend to sync everyone live. One-time, ~5 minutes.</p>
+    <div class="setup-steps">
+      <ol>
+        <li>Go to <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a> and create a project.</li>
+        <li>Add a <b>Web app</b> (the <code>&lt;/&gt;</code> icon) and copy the <code>firebaseConfig</code> values.</li>
+        <li>Enable <b>Authentication → Email/Password</b>.</li>
+        <li>Create a <b>Firestore Database</b> (start in production mode).</li>
+        <li>Paste your config into the top of this file where it says <code>firebaseConfig</code>, then reload.</li>
+      </ol>
+      <p class="hint">Full step-by-step is in <b>SETUP.md</b> next to this file, including the security rules to paste.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ AUTH GATE ============ -->
+<div class="gate" id="authGate" hidden>
+  <div class="gate-card">
+    <div class="brand"><div class="sigil" id="sigilAuth" aria-hidden="true"></div></div>
+    <h2>War Table</h2>
+    <p class="gate-sub" id="authSub">Sign in to your battle roster</p>
+
+    <form id="authForm">
+      <div class="field" id="nameField" hidden>
+        <label for="auName">Display name</label>
+        <input id="auName" autocomplete="nickname" placeholder="What the group calls you">
+      </div>
+      <div class="field">
+        <label for="auEmail">Email</label>
+        <input id="auEmail" type="email" autocomplete="email" required placeholder="you@example.com">
+      </div>
+      <div class="field">
+        <label for="auPass">Password</label>
+        <input id="auPass" type="password" autocomplete="current-password" required minlength="6" placeholder="At least 6 characters">
+      </div>
+      <div class="row2" id="signupExtra" hidden>
+        <div class="field"><label for="auFactions">Faction(s)</label><input id="auFactions" placeholder="e.g. Necrons"></div>
+        <div class="field"><label for="auColor">Colour</label>
+          <select id="auColor">
+            <option value="#c9a24a">Gold</option><option value="#2fb9a3">Teal</option>
+            <option value="#c0392b">Crimson</option><option value="#8a6cff">Violet</option>
+            <option value="#3fae63">Green</option><option value="#e0902b">Amber</option>
+          </select>
+        </div>
+      </div>
+      <div class="err" id="authErr" role="alert"></div>
+      <button type="submit" class="btn primary block" id="authSubmit">Sign in</button>
+    </form>
+
+    <div class="or-divider"><span>or</span></div>
+    <button type="button" class="btn block gbtn" id="googleBtn">
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.9 2.4 30.3 0 24 0 14.6 0 6.4 5.4 2.5 13.2l7.9 6.2C12.3 13.5 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9.1h12.4c-.5 2.9-2.2 5.3-4.6 7l7.1 5.5c4.2-3.9 6.6-9.6 6.6-16z"/><path fill="#FBBC05" d="M10.4 28.6c-.5-1.4-.8-2.9-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C.9 16.3 0 20 0 24s.9 7.7 2.5 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.3 0 11.6-2.1 15.5-5.7l-7.1-5.5c-2 1.3-4.5 2.1-8.4 2.1-6.4 0-11.7-4-13.6-9.9l-7.9 6.2C6.4 42.6 14.6 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+
+    <div class="auth-toggle">
+      <span id="toggleText">New to the group?</span>
+      <button type="button" id="toggleAuth">Create an account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MAIN APP ============ -->
+<div id="app" hidden>
+  <header class="app">
+    <div class="brand">
+      <div class="sigil" id="sigilMain" aria-hidden="true"></div>
+      <div><h1>War Table</h1><div class="sub">40k Battle Calendar</div></div>
+    </div>
+    <div class="whoami">
+      <span class="nm">Logged in as <b id="meName">—</b></span>
+      <button class="btn sm ghost" id="signOutBtn">Sign out</button>
+    </div>
+    <button class="btn primary" id="newBtn" aria-haspopup="dialog">+ New event</button>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Views">
+    <button class="tab" role="tab" aria-selected="true"  data-view="calendar">Calendar</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="games">Pickup Games</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="tourneys">Tournaments</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="players">Players</button>
+  </nav>
+
+  <main id="main" tabindex="-1">
+    <section id="view-calendar" role="tabpanel">
+      <div class="view-head">
+        <h2 id="calMonth" class="cal-nav"><span class="month">—</span></h2>
+        <div class="cal-nav">
+          <button class="btn sm ghost" id="prevM" aria-label="Previous month">‹</button>
+          <button class="btn sm ghost" id="todayBtn">Today</button>
+          <button class="btn sm ghost" id="nextM" aria-label="Next month">›</button>
+        </div>
+      </div>
+      <div class="weekdays" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+      <div class="cal-grid" id="calGrid"></div>
+    </section>
+
+    <section id="view-games" role="tabpanel" hidden>
+      <div class="view-head"><h2>Pickup Games</h2><span class="muted" id="gamesSub"></span><button class="btn sm" data-new="game">+ Post a game</button></div>
+      <div id="gamesList"></div>
+    </section>
+
+    <section id="view-tourneys" role="tabpanel" hidden>
+      <div class="view-head"><h2>Tournaments — RTTs &amp; GTs</h2><span class="muted" id="tourSub"></span><button class="btn sm" data-new="rtt">+ Add tournament</button></div>
+      <div id="tourList"></div>
+    </section>
+
+    <section id="view-players" role="tabpanel" hidden>
+      <div class="view-head"><h2>Players</h2><span class="muted" id="playerSub"></span><button class="btn sm" id="editMeBtn">Edit my profile</button></div>
+      <details class="rank-legend">
+        <summary>How ranks work</summary>
+        <div class="legend-body">
+          <p>Your tier comes from a <b>Battle Rating</b> that rewards winning and weights bigger events more heavily:</p>
+          <ul>
+            <li>Pickup game win <b>×1</b> · RTT win <b>×3</b> · GT win <b>×6</b></li>
+            <li>A draw is worth half a win; a loss earns no points but still counts as a game played.</li>
+            <li>Rating = weighted win points × a win-quality factor, so <b>how much</b> you win and <b>where</b> you win both matter.</li>
+            <li>Play ${''}<b id="placeN"></b> games to leave Unranked.</li>
+          </ul>
+          <div class="tier-legend" id="tierLegend"></div>
+        </div>
+      </details>
+      <div class="grid-cards" id="playerGrid"></div>
+    </section>
+  </main>
+
+  <button class="btn primary fab" id="fab" aria-label="Create new event">+ New</button>
+</div>
+
+<!-- EVENT MODAL -->
+<div class="overlay" id="eventOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="evTitle">
+  <div class="modal">
+    <h3 id="evTitle">New event</h3>
+    <form id="eventForm">
+      <input type="hidden" id="evId">
+      <div class="field">
+        <label id="typeLbl">Type</label>
+        <div class="seg" role="radiogroup" aria-labelledby="typeLbl">
+          <label class="opt"><input type="radio" name="etype" value="game" checked> Pickup Game</label>
+          <label class="opt"><input type="radio" name="etype" value="rtt"> RTT</label>
+          <label class="opt"><input type="radio" name="etype" value="gt"> GT</label>
+        </div>
+      </div>
+      <div class="field"><label for="evName">Title</label><input id="evName" required placeholder="e.g. Casual 2000pt @ the shop"></div>
+      <div class="row2">
+        <div class="field"><label for="evDate">Date</label><input id="evDate" type="date" required></div>
+        <div class="field"><label for="evTime">Time</label><input id="evTime" type="time"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="evLoc">Location</label><input id="evLoc" placeholder="Store / address"></div>
+        <div class="field"><label for="evPts">Points</label><input id="evPts" placeholder="e.g. 2000"></div>
+      </div>
+      <div class="field" id="capField"><label for="evCap">Player cap <span class="hint">(optional)</span></label><input id="evCap" type="number" min="2" placeholder="Leave blank for open"></div>
+      <div class="field" id="linkField" hidden><label for="evLink">Registration link <span class="hint">(BCP / event page)</span></label><input id="evLink" type="url" placeholder="https://"></div>
+      <div class="field"><label for="evNotes">Notes</label><textarea id="evNotes" placeholder="Mission pack, format, whatever people should know…"></textarea></div>
+      <div class="err" id="evErr" role="alert"></div>
+      <div class="modal-foot">
+        <button type="button" class="btn danger ghost" id="deleteEv" hidden>Delete</button>
+        <button type="button" class="btn ghost" data-close>Cancel</button>
+        <button type="submit" class="btn primary">Save event</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- LOG RESULT MODAL -->
+<div class="overlay" id="resultOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="rsTitle">
+  <div class="modal">
+    <h3 id="rsTitle">Log a battle result</h3>
+    <form id="resultForm">
+      <div class="field">
+        <label id="rfmtLbl">Format</label>
+        <div class="seg rseg" role="radiogroup" aria-labelledby="rfmtLbl">
+          <label class="opt"><input type="radio" name="rformat" value="game" checked> Pickup<span class="wtag">×1</span></label>
+          <label class="opt"><input type="radio" name="rformat" value="rtt"> RTT<span class="wtag">×3</span></label>
+          <label class="opt"><input type="radio" name="rformat" value="gt"> GT<span class="wtag">×6</span></label>
+        </div>
+      </div>
+      <div class="field">
+        <label id="routLbl">Outcome</label>
+        <div class="seg rseg" role="radiogroup" aria-labelledby="routLbl">
+          <label class="opt"><input type="radio" name="routcome" value="w" checked> Win</label>
+          <label class="opt"><input type="radio" name="routcome" value="d"> Draw</label>
+          <label class="opt"><input type="radio" name="routcome" value="l"> Loss</label>
+        </div>
+      </div>
+      <div class="err" id="rsErr" role="alert"></div>
+      <div class="modal-foot">
+        <button type="button" class="btn ghost" data-close>Cancel</button>
+        <button type="submit" class="btn primary">Record result</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- PROFILE MODAL -->
+<div class="overlay" id="playerOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="plTitle">
+  <div class="modal">
+    <h3 id="plTitle">My profile</h3>
+    <form id="playerForm">
+      <p class="hint" id="welcomeHint" hidden style="margin:0 0 2px">Welcome to the group! Set up your roster — you can change any of this later.</p>
+      <div class="field"><label for="plName">Name</label><input id="plName" required placeholder="Player name"></div>
+      <div class="field"><label for="plFactions">Factions / armies <span class="hint">(comma separated)</span></label><input id="plFactions" placeholder="e.g. Necrons, Space Wolves"></div>
+      <div class="row2">
+        <div class="field"><label for="plPts">Usual points level</label><input id="plPts" placeholder="e.g. 2000"></div>
+        <div class="field"><label for="plColor">Colour</label>
+          <select id="plColor">
+            <option value="#c9a24a">Gold</option><option value="#2fb9a3">Teal</option>
+            <option value="#c0392b">Crimson</option><option value="#8a6cff">Violet</option>
+            <option value="#3fae63">Green</option><option value="#e0902b">Amber</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" id="wldRow">
+        <label class="grid-lbl">Record <span class="hint">— wins / losses / draws per format</span></label>
+        <div class="rec-grid">
+          <div></div><div class="rg-h">W</div><div class="rg-h">L</div><div class="rg-h">D</div>
+          <div class="rg-lab">Pickup</div><input id="gW" type="number" min="0" value="0" aria-label="Pickup wins"><input id="gL" type="number" min="0" value="0" aria-label="Pickup losses"><input id="gD" type="number" min="0" value="0" aria-label="Pickup draws">
+          <div class="rg-lab">RTT</div><input id="rW" type="number" min="0" value="0" aria-label="RTT wins"><input id="rL" type="number" min="0" value="0" aria-label="RTT losses"><input id="rD" type="number" min="0" value="0" aria-label="RTT draws">
+          <div class="rg-lab">GT</div><input id="tW" type="number" min="0" value="0" aria-label="GT wins"><input id="tL" type="number" min="0" value="0" aria-label="GT losses"><input id="tD" type="number" min="0" value="0" aria-label="GT draws">
+        </div>
+      </div>
+      <div class="err" id="plErr" role="alert"></div>
+      <div class="modal-foot">
+        <button type="button" class="btn ghost" data-close>Cancel</button>
+        <button type="submit" class="btn primary">Save profile</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- ================= FIREBASE CONFIG ================= -->
+<!-- 👇 PASTE YOUR values from the Firebase console here. See SETUP.md. -->
+<script>
+  window.firebaseConfig = {
+    apiKey: "AIzaSyB4UtQXpdKnsfWm6_4HPrX_HMKoh8pNpik",
+    authDomain: "war-table-62fa8.firebaseapp.com",
+    projectId: "war-table-62fa8",
+    storageBucket: "war-table-62fa8.firebasestorage.app",
+    messagingSenderId: "249164874139",
+    appId: "1:249164874139:web:b296aa85cbfdcb1480613e"
+  };
+</script>
+
+<script type="module">
+"use strict";
+/* ============================================================
+   War Table — 40k Battle Calendar (Firebase live edition)
+   - Firebase Auth: each player signs up / logs in (their account)
+   - Firestore: players + events sync LIVE across everyone
+   Setup instructions: see SETUP.md
+============================================================ */
+
+/* ---------- Skull sigil (injected everywhere) ---------- */
+const SKULL = `<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+  <path fill="currentColor" d="M12 1.9c-4.6 0-8.1 3.3-8.1 8 0 2.5 1 4.4 2.7 5.7.3.2.4.5.4.9v1.1c0 .7.6 1.3 1.3 1.3h.4v1.5c0 .4.3.8.8.8s.8-.3.8-.8v-1.5h1v1.5c0 .4.3.8.8.8s.8-.3.8-.8v-1.5h1v1.5c0 .4.3.8.8.8s.8-.3.8-.8v-1.5h.4c.7 0 1.3-.6 1.3-1.3v-1.1c0-.4.1-.7.4-.9 1.7-1.3 2.7-3.2 2.7-5.7 0-4.7-3.5-8-8.1-8z"/>
+  <ellipse cx="8.5" cy="10.2" rx="2" ry="2.4" fill="#14161c"/>
+  <ellipse cx="15.5" cy="10.2" rx="2" ry="2.4" fill="#14161c"/>
+  <path d="M12 12.6l-1.1 2.3h2.2z" fill="#14161c"/>
+</svg>`;
+["sigilMain","sigilAuth","sigilSetup"].forEach(id=>{ const n=document.getElementById(id); if(n) n.innerHTML=SKULL; });
+
+/* ---------- DOM helpers ---------- */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const esc = s => (s||"").replace(/[&<>"]/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const el = html => { const t=document.createElement("template"); t.innerHTML=html.trim(); return t.content.firstElementChild; };
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
+
+/* ---------- Date helpers ---------- */
+function ymd(dt){ return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0"); }
+function startOfMonth(dt){ return new Date(dt.getFullYear(), dt.getMonth(), 1); }
+function parseYMD(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y, m-1, d); }
+function fmtLong(s){ return parseYMD(s).toLocaleDateString(undefined, { weekday:"long", month:"long", day:"numeric", year:"numeric" }); }
+function fmtTime(t){ if(!t) return ""; const [h,m]=t.split(":").map(Number); const ap=h>=12?"PM":"AM"; const hh=((h+11)%12)+1; return hh+":"+String(m).padStart(2,"0")+" "+ap; }
+const TODAY = ymd(new Date());
+const TYPE_LABEL = { game:"Game", rtt:"RTT", gt:"GT" };
+function initials(name){ return (name||"?").trim().split(/\s+/).map(w=>w[0]).slice(0,2).join("").toUpperCase(); }
+
+/* ---------- App state ---------- */
+const state = { players: {}, events: [], user: null, me: null };
+let calCursor = startOfMonth(new Date());
+const player = id => state.players[id];
+
+/* ============================================================
+   FIREBASE BOOT
+============================================================ */
+const cfg = window.firebaseConfig || {};
+const configured = cfg.apiKey && !String(cfg.apiKey).startsWith("PASTE");
+
+let auth, dbf, fb = {};
+
+async function boot(){
+  if(!configured){ $("#setupGate").hidden = false; return; }
+  const appMod  = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+  const authMod = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+  const fsMod   = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+  fb = { ...authMod, ...fsMod };
+  const app = appMod.initializeApp(cfg);
+  auth = authMod.getAuth(app);
+  dbf = fsMod.getFirestore(app);
+
+  authMod.onAuthStateChanged(auth, async (user)=>{
+    state.user = user;
+    if(user){ await onSignedIn(user); }
+    else { showGate("auth"); detachListeners(); }
+  });
+}
+
+function showGate(which){
+  $("#setupGate").hidden = which!=="setup";
+  $("#authGate").hidden   = which!=="auth";
+  $("#app").hidden        = which!=="app";
+}
+
+/* ---------- Auth UI ---------- */
+let signupMode = false;
+function setSignupMode(on){
+  signupMode = on;
+  $("#authSub").textContent = on ? "Create your battle roster" : "Sign in to your battle roster";
+  $("#authSubmit").textContent = on ? "Create account" : "Sign in";
+  $("#nameField").hidden = !on;
+  $("#signupExtra").hidden = !on;
+  $("#auPass").autocomplete = on ? "new-password" : "current-password";
+  $("#toggleText").textContent = on ? "Already have an account?" : "New to the group?";
+  $("#toggleAuth").textContent = on ? "Sign in" : "Create an account";
+  $("#authErr").textContent = "";
+}
+$("#toggleAuth").onclick = ()=>setSignupMode(!signupMode);
+
+$("#authForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const email = $("#auEmail").value.trim();
+  const pass = $("#auPass").value;
+  const errEl = $("#authErr"); errEl.textContent="";
+  const submit = $("#authSubmit"); submit.disabled = true;
+  try {
+    if(signupMode){
+      const name = $("#auName").value.trim();
+      if(!name){ throw { message:"Please enter a display name." }; }
+      const cred = await fb.createUserWithEmailAndPassword(auth, email, pass);
+      await fb.updateProfile(cred.user, { displayName: name });
+      await fb.setDoc(fb.doc(dbf,"players",cred.user.uid), {
+        name,
+        factions: $("#auFactions").value.split(",").map(s=>s.trim()).filter(Boolean),
+        points: "2000",
+        color: $("#auColor").value,
+        wins: 0, losses: 0, draws: 0,
+        createdAt: fb.serverTimestamp()
+      });
+    } else {
+      await fb.signInWithEmailAndPassword(auth, email, pass);
+    }
+  } catch(err){
+    errEl.textContent = friendlyAuthError(err);
+  } finally { submit.disabled = false; }
+});
+
+function friendlyAuthError(err){
+  const c = (err && err.code) || "";
+  if(c.includes("email-already-in-use")) return "That email already has an account — try signing in.";
+  if(c.includes("invalid-credential") || c.includes("wrong-password") || c.includes("user-not-found")) return "Email or password not recognised.";
+  if(c.includes("weak-password")) return "Password should be at least 6 characters.";
+  if(c.includes("invalid-email")) return "That doesn't look like a valid email.";
+  if(c.includes("network")) return "Network error — check your connection.";
+  return (err && err.message) || "Something went wrong. Try again.";
+}
+
+$("#googleBtn").addEventListener("click", async ()=>{
+  const errEl=$("#authErr"); errEl.textContent="";
+  const btn=$("#googleBtn"); btn.disabled=true;
+  try {
+    const provider = new fb.GoogleAuthProvider();
+    await fb.signInWithPopup(auth, provider);
+    // onAuthStateChanged -> onSignedIn creates a profile doc automatically if new
+  } catch(err){
+    if(!String(err.code||"").includes("popup-closed")) errEl.textContent = friendlyAuthError(err);
+  } finally { btn.disabled=false; }
+});
+
+$("#signOutBtn").onclick = ()=> fb.signOut(auth);
+
+/* ---------- Signed-in: attach live listeners ---------- */
+let unsubPlayers=null, unsubEvents=null, pendingWelcome=false;
+function detachListeners(){ if(unsubPlayers) unsubPlayers(); if(unsubEvents) unsubEvents(); unsubPlayers=unsubEvents=null; }
+
+async function onSignedIn(user){
+  // ensure a profile doc exists (covers Google sign-ins & older accounts)
+  const meRef = fb.doc(dbf,"players",user.uid);
+  const snap = await fb.getDoc(meRef);
+  if(!snap.exists()){
+    await fb.setDoc(meRef, { name: user.displayName || (user.email||"Player").split("@")[0], factions:[], points:"2000", color:"#c9a24a", wins:0, losses:0, draws:0, createdAt: fb.serverTimestamp() });
+    pendingWelcome = true;   // brand-new player → prompt to complete profile once
+  }
+  showGate("app");
+  $("#meName").textContent = user.displayName || (user.email||"").split("@")[0];
+
+  detachListeners();
+  unsubPlayers = fb.onSnapshot(fb.collection(dbf,"players"), (qs)=>{
+    const map={}; qs.forEach(d=> map[d.id]={ id:d.id, ...d.data() }); state.players=map;
+    state.me = map[user.uid] || null;
+    if(state.me) $("#meName").textContent = state.me.name;
+    renderAll();
+    if(pendingWelcome && state.me){ pendingWelcome=false; showView("players"); openMyProfile(true); }
+  });
+  unsubEvents = fb.onSnapshot(fb.collection(dbf,"events"), (qs)=>{
+    state.events = qs.docs.map(d=>({ id:d.id, ...d.data() }));
+    renderAll();
+  });
+}
+
+/* ============================================================
+   RENDERING
+============================================================ */
+/* ---------- Tier / Battle Rating system ---------- */
+const WEIGHTS = { game:1, rtt:3, gt:6 };            // GT wins matter most, pickup least
+const DRAW_FACTOR = 0.5;                             // a draw is worth half a win
+const PLACEMENT_GAMES = 3;                           // games needed before you're ranked
+const TIERS = [                                      // high → low; first whose min you meet wins
+  { key:"diamond",  name:"Diamond",  color:"#7cc4ff", min:100 },
+  { key:"platinum", name:"Platinum", color:"#cfe6e6", min:55  },
+  { key:"gold",     name:"Gold",     color:"#e3b23c", min:28  },
+  { key:"silver",   name:"Silver",   color:"#b6c0c9", min:12  },
+  { key:"bronze",   name:"Bronze",   color:"#c8813e", min:0   },
+];
+const UNRANKED = { key:"unranked", name:"Unranked", color:"#5c5f68", min:0 };
+
+// Read a player's per-format record, with fallback for any legacy flat wins/losses/draws.
+function getStats(p){
+  const z=()=>({w:0,l:0,d:0});
+  const cats={ game:z(), rtt:z(), gt:z() };
+  if(p && p.rec){ ["game","rtt","gt"].forEach(k=>{ const r=p.rec[k]||{}; cats[k]={ w:+r.w||0, l:+r.l||0, d:+r.d||0 }; }); }
+  else if(p){ cats.game={ w:+p.wins||0, l:+p.losses||0, d:+p.draws||0 }; }  // legacy → treat as pickup
+  let W=0,L=0,D=0, points=0, wgames=0;
+  ["game","rtt","gt"].forEach(k=>{ const c=cats[k], wt=WEIGHTS[k];
+    W+=c.w; L+=c.l; D+=c.d;
+    points  += c.w*wt + c.d*wt*DRAW_FACTOR;
+    wgames  += (c.w+c.l+c.d)*wt;
+  });
+  const total=W+L+D;
+  const winRate = wgames ? points/wgames : 0;              // weighted win quality, 0..1
+  const rating  = Math.round(points*(0.5+winRate));         // volume scaled by quality
+  const overallRate = total ? Math.round(W/total*100) : 0;
+  return { cats, W, L, D, total, points, winRate, rating, overallRate };
+}
+function tierOf(p){
+  const s=getStats(p);
+  if(s.total < PLACEMENT_GAMES) return { tier:UNRANKED, s, next:TIERS[TIERS.length-1], placement:true };
+  const tier = TIERS.find(t=>s.rating>=t.min) || TIERS[TIERS.length-1];
+  const idx = TIERS.indexOf(tier);
+  return { tier, s, next: idx>0 ? TIERS[idx-1] : null };
+}
+
+function avatar(p, cls=""){
+  if(!p) return `<span class="ava ${cls}" style="background:#555">?</span>`;
+  const { tier } = tierOf(p);
+  const ring = p.color || '#c9a24a';
+  return `<span class="ava ${cls}" style="background:${tier.color};box-shadow:0 0 0 2px ${ring}" title="${esc(p.name)} — ${tier.name}">${initials(p.name)}</span>`;
+}
+
+function attendanceBlock(ev){
+  const going=[], maybe=[];
+  Object.entries(ev.rsvps||{}).forEach(([pid,st])=>{ const p=player(pid); if(!p) return; if(st==="in") going.push(p); else if(st==="maybe") maybe.push(p); });
+  const capTxt = ev.cap ? ` / ${ev.cap}` : "";
+  let html = `<div class="attend"><div class="avatars">`;
+  html += going.map(p=>`<span class="chip">${avatar(p)} ${esc(p.name)}</span>`).join("");
+  html += maybe.map(p=>`<span class="chip maybe" title="Maybe">${avatar(p)} ${esc(p.name)}</span>`).join("");
+  if(!going.length && !maybe.length) html += `<span class="faint" style="font-size:12.5px">No RSVPs yet — be the first.</span>`;
+  html += `</div>`;
+  const mine = ev.rsvps ? ev.rsvps[state.user.uid] : null;
+  html += `<div class="rsvp-bar" data-ev="${ev.id}">
+    <span class="lbl">${going.length} going${capTxt}${maybe.length?` · ${maybe.length} maybe`:""} — you:</span>
+    <button class="rbtn in ${mine==='in'?'on':''}" data-rsvp="in">✓ In</button>
+    <button class="rbtn maybe ${mine==='maybe'?'on':''}" data-rsvp="maybe">? Maybe</button>
+    <button class="rbtn out ${mine==='out'?'on':''}" data-rsvp="out">✗ Out</button>
+  </div></div>`;
+  return html;
+}
+
+function eventCard(ev){
+  const t = ev.type;
+  const bits=[];
+  if(ev.time) bits.push(`<span><span class="ico">🕓</span> ${fmtTime(ev.time)}</span>`);
+  if(ev.loc)  bits.push(`<span><span class="ico">📍</span> ${esc(ev.loc)}</span>`);
+  if(ev.points) bits.push(`<span><span class="ico">⚔️</span> ${esc(ev.points)}pts</span>`);
+  if(ev.cap) bits.push(`<span><span class="ico">👥</span> cap ${ev.cap}</span>`);
+  if(ev.link) bits.push(`<a href="${esc(ev.link)}" target="_blank" rel="noopener"><span class="ico">🔗</span> Register</a>`);
+  const canEdit = ev.createdBy === state.user.uid;
+  return el(`<div class="card ${t}">
+    <div class="card-top">
+      <span class="badge ${t}">${TYPE_LABEL[t]}</span>
+      <span class="card-title">${esc(ev.name)}</span>
+      ${canEdit?`<button class="btn sm ghost" data-edit="${ev.id}" style="margin-left:auto" aria-label="Edit ${esc(ev.name)}">✎</button>`:""}
+    </div>
+    ${bits.length?`<div class="meta-row">${bits.join("")}</div>`:""}
+    ${ev.notes?`<div class="muted" style="font-size:13px">${esc(ev.notes)}</div>`:""}
+    ${attendanceBlock(ev)}
+  </div>`);
+}
+
+function renderGroupedEvents(container, events){
+  container.innerHTML="";
+  if(!events.length){ container.appendChild(el(`<div class="empty"><div class="big">Nothing here yet.</div><div>Post a game or add a tournament to get the group rolling.</div></div>`)); return; }
+  const byDate={}; events.forEach(ev=>{ (byDate[ev.date] ||= []).push(ev); });
+  Object.keys(byDate).sort().forEach((date,i)=>{
+    const list = byDate[date].sort((a,b)=>(a.time||"99").localeCompare(b.time||"99"));
+    const group = el(`<details class="day-group" ${i<3?"open":""}>
+      <summary><span class="caret" aria-hidden="true">▶</span>
+        <span class="dg-date">${fmtLong(date)}${date===TODAY?' <span class="badge game" style="margin-left:6px">Today</span>':''}</span>
+        <span class="dg-count">${list.length} event${list.length>1?"s":""}</span>
+      </summary><div class="dg-body"></div></details>`);
+    const body=$(".dg-body",group); list.forEach(ev=>body.appendChild(eventCard(ev)));
+    container.appendChild(group);
+  });
+}
+
+function renderCalendar(){
+  $("#calMonth .month").textContent = calCursor.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+  const grid=$("#calGrid"); grid.innerHTML="";
+  const first=startOfMonth(calCursor), startDay=first.getDay();
+  const gridStart=new Date(first); gridStart.setDate(1-startDay);
+  const byDate={}; state.events.forEach(ev=>{ (byDate[ev.date] ||= []).push(ev); });
+  for(let i=0;i<42;i++){
+    const dt=new Date(gridStart); dt.setDate(gridStart.getDate()+i);
+    const key=ymd(dt), other=dt.getMonth()!==calCursor.getMonth();
+    const evs=(byDate[key]||[]).sort((a,b)=>(a.time||"99").localeCompare(b.time||"99"));
+    const cell=el(`<button class="day ${other?"other":""} ${key===TODAY?"today":""}" data-date="${key}" aria-label="${fmtLong(key)}, ${evs.length} events"><span class="dnum">${dt.getDate()}</span><span class="pips"></span></button>`);
+    const pips=$(".pips",cell);
+    evs.slice(0,3).forEach(ev=>pips.appendChild(el(`<span class="pip ${ev.type}">${esc(ev.name.length>12?ev.name.slice(0,11)+"…":ev.name)}</span>`)));
+    if(evs.length>3) pips.appendChild(el(`<span class="pip more">+${evs.length-3}</span>`));
+    grid.appendChild(cell);
+  }
+}
+
+function renderGames(){
+  const list=state.events.filter(e=>e.type==="game" && e.date>=TODAY);
+  renderGroupedEvents($("#gamesList"), list);
+  $("#gamesSub").textContent = list.length ? `${list.length} upcoming` : "";
+}
+function renderTourneys(){
+  const list=state.events.filter(e=>(e.type==="rtt"||e.type==="gt") && e.date>=TODAY);
+  renderGroupedEvents($("#tourList"), list);
+  $("#tourSub").textContent = list.length ? `${list.length} upcoming` : "";
+}
+function fmtRec(c){ return `${c.w}-${c.l}-${c.d}`; }
+function progressText(t){
+  if(t.placement) return `${PLACEMENT_GAMES - t.s.total} more game${PLACEMENT_GAMES-t.s.total===1?"":"s"} to get ranked`;
+  if(!t.next) return "Top tier — apex predator";
+  return `${t.next.min - t.s.rating} rating to ${t.next.name}`;
+}
+function renderPlayers(){
+  // rank legend chips
+  const leg=$("#tierLegend");
+  if(leg){ leg.innerHTML = TIERS.slice().reverse().map(t=>`<span class="tl-chip"><span class="tl-dot" style="background:${t.color}"></span>${t.name} <span class="tl-min">${t.min}+</span></span>`).join(""); }
+  const pn=$("#placeN"); if(pn) pn.textContent=PLACEMENT_GAMES;
+
+  const grid=$("#playerGrid"); grid.innerHTML="";
+  const players=Object.values(state.players).map(p=>({p, t:tierOf(p)}))
+    .sort((a,b)=> b.t.s.rating-a.t.s.rating || b.t.s.points-a.t.s.points);
+  if(!players.length){ grid.appendChild(el(`<div class="empty"><div class="big">No players yet.</div></div>`)); }
+  players.forEach(({p,t})=>{
+    const s=t.s, tier=t.tier, isMe=p.id===state.user.uid;
+    const upcoming = state.events.filter(e=>e.rsvps && e.rsvps[p.id]==="in" && e.date>=TODAY).length;
+    const card=el(`<div class="pcard ${isMe?"me":""}">
+      <div class="phead">${avatar(p,"lg")}
+        <div><div class="pname">${esc(p.name)}${isMe?'<span class="youtag">You</span>':''}</div>
+        <div class="faint" style="font-size:12px">${p.points?esc(p.points)+"pts · ":""}${upcoming} upcoming</div></div>
+        ${isMe?`<button class="btn sm ghost" id="editMeCard" style="margin-left:auto" aria-label="Edit my profile">✎</button>`:""}
+      </div>
+      <div class="tierbar">
+        <span class="tier-badge" style="color:${tier.color};border-color:${tier.color};background:${tier.color}22">${tier.name}</span>
+        <span class="tier-prog">Rating ${s.rating} · ${progressText(t)}</span>
+      </div>
+      <div class="factions">${(p.factions||[]).map(f=>`<span class="ftag">${esc(f)}</span>`).join("") || '<span class="faint" style="font-size:12px">No factions listed</span>'}</div>
+      <div class="record">
+        <div class="rec-num"><div class="n w">${s.W}</div><div class="k">Win</div></div>
+        <div class="rec-num"><div class="n l">${s.L}</div><div class="k">Loss</div></div>
+        <div class="rec-num"><div class="n d">${s.D}</div><div class="k">Draw</div></div>
+        <div class="rec-rate"><div class="pct">${s.overallRate}%</div><div class="k">Win rate</div></div>
+      </div>
+      <div class="rec-breakdown"><span><b>Pickup</b> ${fmtRec(s.cats.game)}</span><span><b>RTT</b> ${fmtRec(s.cats.rtt)}</span><span><b>GT</b> ${fmtRec(s.cats.gt)}</span></div>
+      ${isMe?`<div class="logrow"><button class="btn sm" data-openresult style="flex:1">⚔️ Log a result</button></div>`:""}
+    </div>`);
+    grid.appendChild(card);
+  });
+  $("#playerSub").textContent = `${players.length} in the group`;
+}
+
+function renderAll(){ if($("#app").hidden) return; renderCalendar(); renderGames(); renderTourneys(); renderPlayers(); }
+
+/* ============================================================
+   VIEW SWITCHING
+============================================================ */
+function showView(name){
+  $$(".tab").forEach(t=>t.setAttribute("aria-selected", String(t.dataset.view===name)));
+  ["calendar","games","tourneys","players"].forEach(v=>{ $("#view-"+v).hidden = v!==name; });
+}
+$$(".tab").forEach(t=>t.addEventListener("click", ()=>showView(t.dataset.view)));
+$("#prevM").onclick=()=>{ calCursor.setMonth(calCursor.getMonth()-1); renderCalendar(); };
+$("#nextM").onclick=()=>{ calCursor.setMonth(calCursor.getMonth()+1); renderCalendar(); };
+$("#todayBtn").onclick=()=>{ calCursor=startOfMonth(new Date()); renderCalendar(); };
+
+/* ============================================================
+   EVENT MODAL
+============================================================ */
+const evOverlay=$("#eventOverlay");
+function openEvent(ev, presetType, presetDate){
+  const isEdit=!!ev;
+  $("#evTitle").textContent = isEdit ? "Edit event" : "New event";
+  $("#evId").value = ev?.id || "";
+  $("#evName").value = ev?.name || "";
+  $("#evDate").value = ev?.date || presetDate || TODAY;
+  $("#evTime").value = ev?.time || "";
+  $("#evLoc").value = ev?.loc || "";
+  $("#evPts").value = ev?.points || "";
+  $("#evCap").value = ev?.cap || "";
+  $("#evLink").value = ev?.link || "";
+  $("#evNotes").value = ev?.notes || "";
+  $("#evErr").textContent="";
+  const type = ev?.type || presetType || "game";
+  $$('input[name="etype"]').forEach(r=>{ r.checked=r.value===type; });
+  syncTypeUI();
+  $("#deleteEv").hidden = !isEdit;
+  openOverlay(evOverlay,"#evName");
+}
+function syncTypeUI(){
+  const checked=$('input[name="etype"]:checked'); const type=checked?checked.value:"game";
+  $$(".seg .opt").forEach(o=>o.className="opt");
+  if(checked){ checked.closest(".opt").classList.add({game:"sel-game",rtt:"sel-rtt",gt:"sel-gt"}[type]); }
+  $("#linkField").hidden = type==="game";
+  $("#capField").hidden = type!=="game";
+}
+$$('input[name="etype"]').forEach(r=>r.addEventListener("change", syncTypeUI));
+
+$("#eventForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const id=$("#evId").value; const errEl=$("#evErr"); errEl.textContent="";
+  const data={
+    type: ($('input[name="etype"]:checked')||{}).value||"game",
+    name: $("#evName").value.trim(),
+    date: $("#evDate").value,
+    time: $("#evTime").value,
+    loc: $("#evLoc").value.trim(),
+    points: $("#evPts").value.trim(),
+    cap: $("#evCap").value ? Number($("#evCap").value) : null,
+    link: $("#evLink").value.trim(),
+    notes: $("#evNotes").value.trim(),
+  };
+  try {
+    if(id){ await fb.updateDoc(fb.doc(dbf,"events",id), data); toast("Event updated"); }
+    else {
+      data.createdBy = state.user.uid;
+      data.createdAt = fb.serverTimestamp();
+      data.rsvps = { [state.user.uid]: "in" };
+      await fb.addDoc(fb.collection(dbf,"events"), data); toast("Event posted");
+    }
+    closeOverlay(evOverlay);
+  } catch(err){ errEl.textContent = "Couldn't save — "+(err.message||"try again."); }
+});
+$("#deleteEv").addEventListener("click", async ()=>{
+  const id=$("#evId").value; if(!id) return;
+  if(confirm("Delete this event?")){ try{ await fb.deleteDoc(fb.doc(dbf,"events",id)); closeOverlay(evOverlay); toast("Event deleted"); }catch(err){ $("#evErr").textContent=err.message; } }
+});
+
+/* ============================================================
+   PROFILE MODAL (own profile only)
+============================================================ */
+const plOverlay=$("#playerOverlay");
+function openMyProfile(welcome=false){
+  const p=state.me||{};
+  $("#plTitle").textContent = welcome ? "Set up your profile" : "My profile";
+  $("#welcomeHint").hidden = !welcome;
+  $("#wldRow").hidden = welcome;           // no record to set on day one
+  $("#plName").value=p.name||"";
+  $("#plFactions").value=(p.factions||[]).join(", ");
+  $("#plPts").value=p.points||"";
+  $("#plColor").value=p.color||"#c9a24a";
+  const c=getStats(p).cats;
+  $("#gW").value=c.game.w; $("#gL").value=c.game.l; $("#gD").value=c.game.d;
+  $("#rW").value=c.rtt.w;  $("#rL").value=c.rtt.l;  $("#rD").value=c.rtt.d;
+  $("#tW").value=c.gt.w;   $("#tL").value=c.gt.l;   $("#tD").value=c.gt.d;
+  $("#plErr").textContent="";
+  openOverlay(plOverlay,"#plFactions");
+}
+const nn = id => Math.max(0, Number($(id).value)||0);
+$("#playerForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const data={
+    name:$("#plName").value.trim(),
+    factions:$("#plFactions").value.split(",").map(s=>s.trim()).filter(Boolean),
+    points:$("#plPts").value.trim(),
+    color:$("#plColor").value,
+    rec:{
+      game:{ w:nn("#gW"), l:nn("#gL"), d:nn("#gD") },
+      rtt: { w:nn("#rW"), l:nn("#rL"), d:nn("#rD") },
+      gt:  { w:nn("#tW"), l:nn("#tL"), d:nn("#tD") },
+    },
+    wins:null, losses:null, draws:null,   // retire legacy flat fields
+  };
+  try {
+    await fb.updateDoc(fb.doc(dbf,"players",state.user.uid), data);
+    if(auth.currentUser && data.name && data.name!==auth.currentUser.displayName){ await fb.updateProfile(auth.currentUser, { displayName:data.name }); $("#meName").textContent=data.name; }
+    closeOverlay(plOverlay); toast("Profile saved");
+  } catch(err){ $("#plErr").textContent="Couldn't save — "+(err.message||"try again."); }
+});
+
+/* ---------- Log result modal ---------- */
+const rsOverlay=$("#resultOverlay");
+function openResult(){ $("#rsErr").textContent=""; $$('input[name="rformat"]')[0].checked=true; $$('input[name="routcome"]')[0].checked=true; openOverlay(rsOverlay,"#resultForm .opt input"); }
+$("#resultForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const fmt=($('input[name="rformat"]:checked')||{}).value||"game";
+  const out=($('input[name="routcome"]:checked')||{}).value||"w";
+  try {
+    await fb.updateDoc(fb.doc(dbf,"players",state.user.uid), { [`rec.${fmt}.${out}`]: fb.increment(1) });
+    closeOverlay(rsOverlay);
+    toast(out==="w"?"Victory recorded! ⚔️":out==="l"?"Loss recorded":"Draw recorded");
+  } catch(err){ $("#rsErr").textContent="Couldn't record — "+(err.message||"try again."); }
+});
+
+/* ============================================================
+   OVERLAY HELPERS
+============================================================ */
+let lastFocused=null;
+function openOverlay(ov, focusSel){ lastFocused=document.activeElement; ov.hidden=false; const f=focusSel&&$(focusSel,ov); if(f) setTimeout(()=>f.focus(),30); }
+function closeOverlay(ov){ ov.hidden=true; if(lastFocused) lastFocused.focus(); }
+$$("[data-close]").forEach(b=>b.addEventListener("click", ()=>closeOverlay(b.closest(".overlay"))));
+$$(".overlay").forEach(ov=>ov.addEventListener("click", e=>{ if(e.target===ov) closeOverlay(ov); }));
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") $$(".overlay").forEach(ov=>{ if(!ov.hidden) closeOverlay(ov); }); });
+
+/* ============================================================
+   GLOBAL CLICK DELEGATION
+============================================================ */
+document.addEventListener("click", e=>{
+  const rsvp=e.target.closest("[data-rsvp]");
+  if(rsvp){
+    const evId=rsvp.closest(".rsvp-bar").dataset.ev;
+    const ev=state.events.find(x=>x.id===evId); if(!ev) return;
+    const val=rsvp.dataset.rsvp; const cur=ev.rsvps?ev.rsvps[state.user.uid]:null;
+    const path="rsvps."+state.user.uid;
+    const upd = cur===val ? { [path]: fb.deleteField() } : { [path]: val };
+    fb.updateDoc(fb.doc(dbf,"events",evId), upd).catch(()=>toast("Couldn't RSVP"));
+    return;
+  }
+  const edit=e.target.closest("[data-edit]");
+  if(edit){ openEvent(state.events.find(x=>x.id===edit.dataset.edit)); return; }
+  if(e.target.closest("[data-openresult]")){ openResult(); return; }
+  if(e.target.closest("#editMeCard")){ openMyProfile(); return; }
+  const day=e.target.closest(".day");
+  if(day){ openEvent(null,"game",day.dataset.date); return; }
+  const nt=e.target.closest("[data-new]");
+  if(nt){ openEvent(null,nt.dataset.new); return; }
+});
+$("#newBtn").onclick=()=>openEvent(null,"game");
+$("#fab").onclick=()=>openEvent(null,"game");
+$("#editMeBtn").onclick=()=>openMyProfile();
+
+/* ---------- Go ---------- */
+showView("calendar");
+boot().catch(err=>{ console.error(err); $("#authErr") && ($("#authErr").textContent="Failed to load Firebase: "+err.message); $("#setupGate").hidden=false; });
+</script>
+</body>
+</html>
